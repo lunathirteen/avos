@@ -1,6 +1,7 @@
 """
 Module generates fake data
 """
+
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from typing import Any, Dict, List
@@ -23,7 +24,9 @@ class FakeUserRegistration(FakeDataGenerator):
         for _ in range(self._n_events):
             td_hours = np.random.randint(-72, -1)
             td_ms = np.random.randint(-100000, 100000)
-            r_times.append(datetime.now() + timedelta(hours=td_hours, milliseconds=td_ms))
+            r_times.append(
+                datetime.now() + timedelta(hours=td_hours, milliseconds=td_ms)
+            )
 
         return r_times
 
