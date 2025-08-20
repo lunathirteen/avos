@@ -13,6 +13,11 @@ dependencies = [
     "pytest>=8.4.1",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest", "black", "flake8"
+]
+
 [build-system]
 requires = ["uv_build>=0.8.12,<0.9.0"]
 build-backend = "uv_build"
