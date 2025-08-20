@@ -50,9 +50,7 @@ def calculate_sample_size_proportions(
 
     target_rate = baseline_rate * (1 + mde)
     if target_rate >= 1:
-        raise ValueError(
-            "The calculated target rate must be less than 1. Please adjust baseline_rate or mde."
-        )
+        raise ValueError("The calculated target rate must be less than 1. Please adjust baseline_rate or mde.")
 
     # Calculate effect size using Cohen's h
     # Cohen's h = 2 * arcsin(sqrt(p1)) - 2 * arcsin(sqrt(p0))
@@ -64,9 +62,7 @@ def calculate_sample_size_proportions(
 
     # Create a power analysis object for a two-sample z-test for proportions
     analysis = NormalIndPower()
-    sample_size = analysis.solve_power(
-        effect_size=effect_size, alpha=alpha, power=power, alternative=alternative
-    )
+    sample_size = analysis.solve_power(effect_size=effect_size, alpha=alpha, power=power, alternative=alternative)
 
     return {"sample_size": math.ceil(sample_size)}
 
@@ -119,9 +115,7 @@ def calculate_sample_size_continuous(
 
     # Create a power analysis object for a two-sample t-test
     analysis = TTestIndPower()
-    sample_size = analysis.solve_power(
-        effect_size=effect_size, alpha=alpha, power=power, alternative=alternative
-    )
+    sample_size = analysis.solve_power(effect_size=effect_size, alpha=alpha, power=power, alternative=alternative)
 
     # Return the ceiling of the computed sample size (per group)
     return {"sample_size": math.ceil(sample_size)}
@@ -151,9 +145,7 @@ def plot_power_curve_continuous(
 
     for mde in mde_values:
         # Calculate Sample Size
-        n = calculate_sample_size_continuous(
-            baseline_mean=baseline_mean, mde=mde, std=std
-        )
+        n = calculate_sample_size_continuous(baseline_mean=baseline_mean, mde=mde, std=std)
         sample_sizes.append(n)
 
     plt.figure(figsize=(8, 5))
@@ -299,10 +291,7 @@ def sensitivity_analysis_proportions(
         target_rate = baseline_rate * (1 + mde)
         if target_rate >= 1:
             return effect_size  # beyond valid range, just return positive diff
-        h = abs(
-            2 * math.asin(math.sqrt(target_rate))
-            - 2 * math.asin(math.sqrt(baseline_rate))
-        )
+        h = abs(2 * math.asin(math.sqrt(target_rate)) - 2 * math.asin(math.sqrt(baseline_rate)))
         return h - effect_size
 
     # Solve for mde. We know mde must be > 0 and less than (1 - baseline_rate)/baseline_rate.

@@ -51,9 +51,7 @@ def check_srm(observed_counts, expected_proportions=None, alpha=0.01):
     # Calculate difference
     observed_proportions = [count / total_count for count in observed_counts]
     max_difference = max(observed_counts) - min(observed_counts)
-    max_lift = (max(observed_counts) - min(observed_counts)) / (
-        total_count / len(observed_counts)
-    )
+    max_lift = (max(observed_counts) - min(observed_counts)) / (total_count / len(observed_counts))
 
     # Determine if SRM is detected
     srm_detected = p_value < alpha

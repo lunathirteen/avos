@@ -12,12 +12,23 @@ dependencies = [
     { name = "pytest" },
 ]
 
+[package.optional-dependencies]
+dev = [
+    { name = "black" },
+    { name = "flake8" },
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "black", specifier = ">=25.1.0" },
+    { name = "black", marker = "extra == 'dev'" },
     { name = "flake8", specifier = ">=7.3.0" },
+    { name = "flake8", marker = "extra == 'dev'" },
     { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest", marker = "extra == 'dev'" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "black"

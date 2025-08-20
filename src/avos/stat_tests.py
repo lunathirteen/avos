@@ -2,9 +2,7 @@ import numpy as np
 from statsmodels.stats.proportion import proportions_ztest, test_proportions_2indep
 
 
-def test_proportion_difference(
-    count1, nobs1, count2, nobs2, method="ztest", alternative="two-sided", value=0
-):
+def test_proportion_difference(count1, nobs1, count2, nobs2, method="ztest", alternative="two-sided", value=0):
     """
     Test for difference in proportions between two independent samples.
 
@@ -51,15 +49,11 @@ def test_proportion_difference(
         # Use proportions_ztest
         counts = np.array([count1, count2])
         nobs = np.array([nobs1, nobs2])
-        stat, pval = proportions_ztest(
-            counts, nobs, alternative=alternative, value=value
-        )
+        stat, pval = proportions_ztest(counts, nobs, alternative=alternative, value=value)
 
     elif method == "indep":
         # Use test_proportions_2indep (more comprehensive)
-        result = test_proportions_2indep(
-            count1, nobs1, count2, nobs2, alternative=alternative, value=value
-        )
+        result = test_proportions_2indep(count1, nobs1, count2, nobs2, alternative=alternative, value=value)
         stat = result.statistic
         pval = result.pvalue
     else:
