@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pytest
-from avos.config import ExperimentConfig
+from avos.config import ExperimentConfig, ExperimentRange
 
 
 def test_experiment_config_creation():
@@ -59,3 +59,13 @@ def test_zero_traffic_allocation():
                 "b": 0.0,
             },  # 0 allocation percent for variant, exception
         )
+
+def test_experiment_range_creation():
+    exp_range = ExperimentRange(
+        experiment_id="exp_001",
+        start_range=0,
+        end_range=50
+    )
+
+    assert exp_range.contains(50) is False
+    assert exp_range.contains(10) is True
