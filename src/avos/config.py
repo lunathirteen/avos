@@ -84,7 +84,7 @@ class Layer:
         if experiment.experiment_id in self.experiments:
             raise ValueError(f"Experiment {experiment.experiment_id} already exists in layer")
 
-        current_traffic = sum(exp.traffic_percentage for exp in self.experiments)
+        current_traffic = sum(exp.traffic_percentage for exp in self.experiments.values())
         if current_traffic + experiment.traffic_percentage > 100.0 + 1e-9:
             return False  # Недостаточно места
 
