@@ -27,7 +27,7 @@ class ExperimentConfig:
     traffic_percentage: float = 100.0
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    target_audience: Optional[Dict[str, Any]] = field(default_factory=list)
+    target_audience: Optional[Dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self):
         # Validate traffic allocation
