@@ -187,13 +187,13 @@ class Layer:
             "experiment_slots": experiment_slots,
         }
 
-    def _assign_slot(self, user_id: str | int) -> float:
+    def _assign_slot(self, user_id: str | int) -> int:
         """Assign unit to slot."""
         hash_input = f"{user_id}{self.layer_salt}".encode("utf-8")
         hash_digest = hashlib.md5(hash_input).hexdigest()
         hash_int = int(hash_digest, 16)
 
-        return int(hash_int / self.total_slots)
+        return int(hash_int % self.total_slots)
 
     def remove_experiment(self, experiment_id: str) -> bool:
         """
