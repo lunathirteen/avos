@@ -168,7 +168,7 @@ class Layer:
         hash_digest = hashlib.md5(hash_input).hexdigest()
         hash_int = int(hash_digest, 16)
 
-        return int((hash_int % 10000) / 100.0)
+        return int(hash_int / self.total_slots)
 
     def remove_experiment(self, experiment_id: str) -> bool:
         """
