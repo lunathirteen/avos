@@ -160,3 +160,31 @@ def test_layer_assign_unit():
     assignment2 = layer.get_user_assignment('user_123456')
 
     assert assignment1 == assignment2
+
+def test_layer_remove_exp():
+    layer = Layer("ui_experiments", "ui_salt_2025", total_slots=100)
+    button_exp = ExperimentConfig(
+        experiment_id="button_color",
+        name="Button Color Test",
+        variants=["control", "treatment"],
+        traffic_allocation={"control": 50.0, "treatment": 50.0},
+        traffic_percentage=30
+    )
+
+    layout_exp = ExperimentConfig(
+        experiment_id="layout_test",
+        name="Layout Experiment",
+        variants=["old", "new"],
+        traffic_allocation={"old": 60.0, "new": 40.0},
+        traffic_percentage=25
+    )
+
+    success1 = layer.add_experiment(button_exp)
+    success2 = layer.add_experiment(layout_exp)
+
+    assert layer.get_free_slots_count() == 45
+
+    success3 = layer.remove_experiment('layout_test')
+
+    assert success3 is True
+    assert layer.get_free_slots_count() == 70

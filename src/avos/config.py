@@ -170,63 +170,25 @@ class Layer:
 
         return int((hash_int % 10000) / 100.0)
 
-    # def finish_experiment(self, experiment_id: str) -> bool:
-    #     """
-    #     Завершает эксперимент, освобождая его бакеты.
+    def remove_experiment(self, experiment_id: str) -> bool:
+        """
+        Завершает эксперимент, освобождая его бакеты.
 
-    #     Returns:
-    #         True если эксперимент найден и завершен, False если не найден
-    #     """
-    #     if experiment_id not in self.experiments:
-    #         return False
+        Returns:
+            True если эксперимент найден и завершен, False если не найден
+        """
+        if experiment_id not in self.experiments:
+            return False
 
-    #     # Освобождаем все бакеты этого эксперимента
-    #     freed_buckets = []
-    #     for i, bucket in enumerate(self.buckets):
-    #         if bucket == experiment_id:
-    #             self.buckets[i] = None
-    #             freed_buckets.append(i)
+        # Освобождаем все бакеты этого эксперимента
+        freed_slots = []
+        for i, slot in enumerate(self.slots):
+            if slot == experiment_id:
+                self.slots[i] = None
+                freed_slots.append(i)
 
-    #     # Удаляем из реестра
-    #     del self.experiments[experiment_id]
+        # Удаляем из реестра
+        del self.experiments[experiment_id]
 
-    #     print(f"🔄 Experiment {experiment_id} finished, freed buckets: {freed_buckets}")
-    #     return True
-
-
-
-    # def _assign_variant_within_experiment(self, unit_id: str, experiment: ExperimentConfig) -> str:
-    #     """Назначает вариант внутри эксперимента"""
-    #     # Используем experiment-specific hash для назначения варианта
-    #     hash_input = f"{unit_id}{self.layer_salt}{experiment.experiment_id}"
-    #     hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16) % 100
-
-    #     cumulative_percentage = 0
-    #     for variant, percentage in experiment.traffic_allocation.items():
-    #         cumulative_percentage += percentage
-    #         if hash_value < cumulative_percentage:
-    #             return variant
-
-    #     # Fallback
-    #     return list(experiment.traffic_allocation.keys())[-1]
-
-
-
-
-
-    # def get_bucket_visualization(self) -> str:
-    #     """Визуализация распределения бакетов (для отладки)"""
-    #     viz = []
-    #     current_exp = None
-    #     start_idx = 0
-
-    #     for i, bucket in enumerate(self.buckets + [None]):  # +[None] для обработки последней группы
-    #         if bucket != current_exp:
-    #             if current_exp is not None:
-    #                 length = i - start_idx
-    #                 exp_name = current_exp if current_exp else "FREE"
-    #                 viz.append(f"[{start_idx:2d}-{i-1:2d}] {exp_name:12} ({length:2d} buckets)")
-    #             current_exp = bucket
-    #             start_idx = i
-
-    #     return "\n".join(viz)
+        print(f"🔄 Experiment {experiment_id} finished, freed slots: {freed_slots}")
+        return True
