@@ -4,70 +4,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from .splitter import HashBasedSplitter
+from avos.models.experiment import ExperimentConfig
 import hashlib
-
-
-class ExperimentStatus(Enum):
-    DRAFT = "draft"
-    ACTIVE = "active"
-    PAUSED = "paused"
-    COMPLETED = "completed"
-
-
-@dataclass
-class ExperimentConfig:
-    """Configuration for a single experiment.
-
-    :param experiment_id: Unique experiment identifier
-    :param name: Human-readable experiment name
-    :param variants: List of variants (e.g., ['control', 'treatment'])
-    :param traffic_allocation: Percent of traffic for each variant (must sum to 100)
-    :param traffic_percentage: Share of layer traffic this experiment should receive
-    :param start_date: Optional start date for the experiment
-    :param end_date: Optional end date for the experiment
-    :param target_audience: Optional targeting criteria
-    """
-
-    experiment_id: str
-    name: str
-    variants: List[str]
-    traffic_allocation: Dict[str, float]
-    traffic_percentage: float = 100.0
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    target_audience: Optional[Dict[str, Any]] = field(default_factory=dict)
-    status: ExperimentStatus = ExperimentStatus.DRAFT
-
-    def __post_init__(self):
-        # Validate traffic allocation
-        if any(allocation_perc <= 0 for allocation_perc in self.traffic_allocation.values()):
-            raise ValueError("All traffic_allocation values must be greater than 0")
-
-        total_traffic = sum(self.traffic_allocation.values())
-        if abs(total_traffic - 100.0) > 0.01:
-            raise ValueError(f"Sum of traffic_allocation must be 100%, but is {total_traffic:.2f}%")
-
-        # Validate dates
-        if self.start_date and self.end_date and self.start_date > self.end_date:
-            raise ValueError("start_date must be before end_date")
-
-        # Validate traffic percentage
-        if self.traffic_percentage <= 0 or self.traffic_percentage > 100:
-            raise ValueError("traffic_percentage must be in (0, 100]")
-
-    def is_active(self, current_time: datetime = None) -> bool:
-        """Check if experiment is currently active"""
-        if self.status != ExperimentStatus.ACTIVE:
-            return False
-
-        current_time = current_time or datetime.now()
-
-        if self.start_date and current_time < self.start_date:
-            return False
-        if self.end_date and current_time > self.end_date:
-            return False
-
-        return True
 
 
 @dataclass
@@ -157,7 +95,7 @@ class Layer:
         experiment = self.experiments[experiment_id]
 
         hash_splitter = HashBasedSplitter(experiment_id=experiment.experiment_id)
-        variant = hash_splitter.assign_variant(unit_id, experiment.variants, experiment.traffic_allocation.values())
+        variant = hash_splitter.assign_variant(unit_id, experiment.variant_list(), experiment.traffic_dict().values())
 
         return {
             "unit_id": unit_id,
