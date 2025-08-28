@@ -1,9 +1,17 @@
+from enum import Enum
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from .splitter import HashBasedSplitter
 import hashlib
+
+
+class ExperimentStatus(Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
 
 
 @dataclass
@@ -28,6 +36,7 @@ class ExperimentConfig:
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     target_audience: Optional[Dict[str, Any]] = field(default_factory=dict)
+    status: ExperimentStatus = ExperimentStatus.DRAFT
 
     def __post_init__(self):
         # Validate traffic allocation
@@ -46,9 +55,25 @@ class ExperimentConfig:
         if self.traffic_percentage <= 0 or self.traffic_percentage > 100:
             raise ValueError("traffic_percentage must be in (0, 100]")
 
+    def is_active(self, current_time: datetime = None) -> bool:
+        """Check if experiment is currently active"""
+        if self.status != ExperimentStatus.ACTIVE:
+            return False
+
+        current_time = current_time or datetime.now()
+
+        if self.start_date and current_time < self.start_date:
+            return False
+        if self.end_date and current_time > self.end_date:
+            return False
+
+        return True
+
+
 @dataclass
 class Layer:
     """Слой экспериментов с фиксированным количеством бакетов"""
+
     layer_id: str
     layer_salt: str
     total_slots: int = 100
@@ -125,7 +150,7 @@ class Layer:
                 "experiment_id": None,
                 "variant": None,
                 "status": "not_assigned",
-                "slot_id": slot_id
+                "slot_id": slot_id,
             }
 
         # Назначаем вариант внутри эксперимента
@@ -140,7 +165,7 @@ class Layer:
             "variant": variant,
             "status": "assigned",
             "bucket_id": slot_id,
-            "experiment_name": experiment.name
+            "experiment_name": experiment.name,
         }
 
     def get_layer_info(self) -> Dict[str, Any]:
@@ -159,10 +184,10 @@ class Layer:
             "used_slots": self.total_slots - free_slots,
             "utilization_percentage": ((self.total_slots - free_slots) / self.total_slots) * 100,
             "active_experiments": len(self.experiments),
-            "experiment_slots": experiment_slots
+            "experiment_slots": experiment_slots,
         }
 
-    def _assign_slot(self, user_id: str|int) -> float:
+    def _assign_slot(self, user_id: str | int) -> float:
         """Assign unit to slot."""
         hash_input = f"{user_id}{self.layer_salt}".encode("utf-8")
         hash_digest = hashlib.md5(hash_input).hexdigest()
