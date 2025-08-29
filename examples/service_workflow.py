@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from avos.models.base import Base
@@ -253,7 +253,7 @@ def main():
 
     # Check which experiments are currently active
     print("\nActive Experiments Right Now:")
-    all_experiments = session.query(Experiment).all()
+    all_experiments = session.execute(select(Experiment)).scalars().all()
     for exp in all_experiments:
         active_status = "✅ ACTIVE" if exp.is_active() else "❌ INACTIVE"
         print(f"   {exp.experiment_id}: {active_status}")
