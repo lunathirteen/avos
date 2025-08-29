@@ -1,11 +1,11 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from datetime import datetime, timedelta, UTC
+from unittest.mock import patch
+from datetime import timedelta
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from avos.models.base import Base
-from avos.models.layer import Layer, LayerSlot
+from avos.models.layer import LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
 from avos.services.splitter import HashBasedSplitter, AssignmentService

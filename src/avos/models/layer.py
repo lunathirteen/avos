@@ -1,12 +1,15 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from sqlalchemy import String, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from avos.models.base import Base
 from avos.utils.datetime_utils import utc_now
+
+if TYPE_CHECKING:
+    from avos.models.experiment import Experiment
 
 
 class Layer(Base):

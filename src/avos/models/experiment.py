@@ -2,12 +2,15 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from enum import Enum
-from typing import List, Dict
+from typing import List, Dict, TYPE_CHECKING
 
 from sqlalchemy import String, Float, DateTime, Integer, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from avos.models.base import Base
-from avos.utils.datetime_utils import to_utc, utc_now, UTC
+from avos.utils.datetime_utils import to_utc, utc_now
+
+if TYPE_CHECKING:
+    from avos.models.layer import Layer
 
 
 class ExperimentStatus(Enum):

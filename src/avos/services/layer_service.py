@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func
 
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus

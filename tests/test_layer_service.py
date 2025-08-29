@@ -67,6 +67,7 @@ class TestLayerCRUD:
     def test_create_layer_populates_slots(self, db_session):
         """Test that creating a layer pre-populates all slots."""
         layer = LayerService.create_layer(db_session, "slot_test", "salt", total_slots=20)
+        assert layer.layer_id == "slot_test"
 
         # Check all slots were created
         slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "slot_test")).scalars().all()
