@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta, UTC
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from avos.models.base import Base
@@ -239,7 +239,12 @@ class TestAssignmentService:
         for i in range(1000):
             user_id = f"user_{i}"
             slot_index = AssignmentService._calculate_user_slot(layer.layer_salt, layer.total_slots, user_id)
-            slot = db_session.query(LayerSlot).filter_by(layer_id="inactive_layer", slot_index=slot_index).first()
+            slot = db_session.execute(
+                select(LayerSlot).where(
+                    LayerSlot.layer_id == "inactive_layer",
+                    LayerSlot.slot_index == slot_index
+                )
+            ).scalar_one_or_none()
 
             if slot and slot.experiment_id == "inactive_exp":
                 assignment = AssignmentService.get_user_assignment(db_session, layer, user_id)
