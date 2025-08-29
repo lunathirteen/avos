@@ -17,7 +17,7 @@ class LayerService:
         layer_id: str,
         layer_salt: str,
         total_slots: int = 100,
-        total_traffic_percentage: float = 100.0
+        total_traffic_percentage: float = 100.0,
     ) -> Layer:
         """Create a new layer with pre-allocated empty slots."""
         layer = Layer(
@@ -38,16 +38,12 @@ class LayerService:
     @staticmethod
     def get_layer(session: Session, layer_id: str) -> Layer | None:
         """Get layer by ID."""
-        return session.execute(
-            select(Layer).where(Layer.layer_id == layer_id)
-        ).scalar_one_or_none()
+        return session.execute(select(Layer).where(Layer.layer_id == layer_id)).scalar_one_or_none()
 
     @staticmethod
     def delete_layer(session: Session, layer_id: str) -> bool:
         """Delete layer and all its slots/experiments."""
-        layer = session.execute(
-            select(Layer).where(Layer.layer_id == layer_id)
-        ).scalar_one_or_none()
+        layer = session.execute(select(Layer).where(Layer.layer_id == layer_id)).scalar_one_or_none()
 
         if not layer:
             return False
@@ -65,25 +61,22 @@ class LayerService:
             raise ValueError("Experiment.layer_id must match the target layer")
 
         # Check traffic capacity
-        current_traffic = sum(
-            e.traffic_percentage
-            for e in layer.experiments
-            if e.status != ExperimentStatus.COMPLETED
-        )
+        current_traffic = sum(e.traffic_percentage for e in layer.experiments if e.status != ExperimentStatus.COMPLETED)
         if current_traffic + experiment.traffic_percentage > layer.total_traffic_percentage + 1e-9:
             return False
 
         # Check slot availability
         slots_needed = int((experiment.traffic_percentage / 100) * layer.total_slots)
 
-        free_slots = session.execute(
-            select(LayerSlot)
-            .where(
-                LayerSlot.layer_id == layer.layer_id,
-                LayerSlot.experiment_id.is_(None)
+        free_slots = (
+            session.execute(
+                select(LayerSlot)
+                .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id.is_(None))
+                .limit(slots_needed)
             )
-            .limit(slots_needed)
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         if len(free_slots) < slots_needed:
             return False
@@ -100,21 +93,19 @@ class LayerService:
     def remove_experiment(session: Session, layer: Layer, experiment_id: str) -> bool:
         """Remove experiment from layer, freeing its slots."""
         experiment = session.execute(
-            select(Experiment).where(
-                Experiment.experiment_id == experiment_id,
-                Experiment.layer_id == layer.layer_id
-            )
+            select(Experiment).where(Experiment.experiment_id == experiment_id, Experiment.layer_id == layer.layer_id)
         ).scalar_one_or_none()
 
         if not experiment:
             return False
 
-        freed_slots = session.execute(
-            select(LayerSlot).where(
-                LayerSlot.layer_id == layer.layer_id,
-                LayerSlot.experiment_id == experiment_id
+        freed_slots = (
+            session.execute(
+                select(LayerSlot).where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id == experiment_id)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         for slot in freed_slots:
             slot.experiment_id = None
@@ -138,10 +129,7 @@ class LayerService:
         free_slots = session.execute(
             select(func.count())
             .select_from(LayerSlot)
-            .where(
-                LayerSlot.layer_id == layer.layer_id,
-                LayerSlot.experiment_id.is_(None)
-            )
+            .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id.is_(None))
         ).scalar()
 
         # Count slots per experiment
@@ -150,10 +138,7 @@ class LayerService:
             count = session.execute(
                 select(func.count())
                 .select_from(LayerSlot)
-                .where(
-                    LayerSlot.layer_id == layer.layer_id,
-                    LayerSlot.experiment_id == experiment.experiment_id
-                )
+                .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id == experiment.experiment_id)
             ).scalar()
             experiment_slot_counts[experiment.experiment_id] = count
 
@@ -170,9 +155,7 @@ class LayerService:
     @staticmethod
     def get_layers_by_prefix(session: Session, prefix: str) -> list[Layer]:
         """Get all layers with IDs starting with prefix."""
-        return session.execute(
-            select(Layer).where(Layer.layer_id.like(f"{prefix}%"))
-        ).scalars().all()
+        return session.execute(select(Layer).where(Layer.layer_id.like(f"{prefix}%"))).scalars().all()
 
     @staticmethod
     def bulk_free_experiment_slots(session: Session, layer_id: str, experiment_id: str) -> int:
@@ -181,10 +164,7 @@ class LayerService:
 
         result = session.execute(
             update(LayerSlot)
-            .where(
-                LayerSlot.layer_id == layer_id,
-                LayerSlot.experiment_id == experiment_id
-            )
+            .where(LayerSlot.layer_id == layer_id, LayerSlot.experiment_id == experiment_id)
             .values(experiment_id=None)
         )
         session.commit()

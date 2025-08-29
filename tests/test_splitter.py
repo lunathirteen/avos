@@ -39,7 +39,7 @@ def sample_layer_with_experiment(db_session):
         traffic_allocation={"red": 40, "blue": 35, "green": 25},
         traffic_percentage=60.0,
         start_date=utc_now() - timedelta(days=1),  # UTC datetime
-        end_date=utc_now() + timedelta(days=7),    # UTC datetime
+        end_date=utc_now() + timedelta(days=7),  # UTC datetime
         status=ExperimentStatus.ACTIVE,
     )
 
@@ -240,10 +240,7 @@ class TestAssignmentService:
             user_id = f"user_{i}"
             slot_index = AssignmentService._calculate_user_slot(layer.layer_salt, layer.total_slots, user_id)
             slot = db_session.execute(
-                select(LayerSlot).where(
-                    LayerSlot.layer_id == "inactive_layer",
-                    LayerSlot.slot_index == slot_index
-                )
+                select(LayerSlot).where(LayerSlot.layer_id == "inactive_layer", LayerSlot.slot_index == slot_index)
             ).scalar_one_or_none()
 
             if slot and slot.experiment_id == "inactive_exp":
@@ -328,8 +325,10 @@ class TestAssignmentService:
 class TestAssignmentServiceMocked:
     """Test AssignmentService with mocked dependencies."""
 
-    @patch('avos.services.splitter.HashBasedSplitter.assign_variant')
-    def test_get_user_assignment_variant_assignment_called(self, mock_assign_variant, db_session, sample_layer_with_experiment):
+    @patch("avos.services.splitter.HashBasedSplitter.assign_variant")
+    def test_get_user_assignment_variant_assignment_called(
+        self, mock_assign_variant, db_session, sample_layer_with_experiment
+    ):
         """Test that variant assignment is called with correct parameters."""
         mock_assign_variant.return_value = "mocked_variant"
 
@@ -344,11 +343,7 @@ class TestAssignmentServiceMocked:
                 assert assignment["variant"] == "mocked_variant"
 
                 # Verify the mock was called with correct arguments
-                mock_assign_variant.assert_called_once_with(
-                    user_id,
-                    ["red", "blue", "green"],
-                    [40.0, 35.0, 25.0]
-                )
+                mock_assign_variant.assert_called_once_with(user_id, ["red", "blue", "green"], [40.0, 35.0, 25.0])
                 break
         else:
             pytest.fail("No user was assigned to the experiment")
@@ -463,6 +458,6 @@ class TestIntegrationScenarios:
                 variant_b_pct = variant_b_count / total_assigned * 100
 
                 # Allow ±5% variance from expected
-                assert 45 <= control_pct <= 55   # ~50% expected
+                assert 45 <= control_pct <= 55  # ~50% expected
                 assert 25 <= variant_a_pct <= 35  # ~30% expected
                 assert 15 <= variant_b_pct <= 25  # ~20% expected

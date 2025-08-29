@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 UTC = timezone.utc
 
+
 def to_utc(dt: datetime | None) -> datetime | None:
     """Convert any datetime to UTC timezone-aware datetime."""
     if dt is None:
@@ -13,6 +14,7 @@ def to_utc(dt: datetime | None) -> datetime | None:
     else:
         # Convert timezone-aware datetime to UTC
         return dt.astimezone(UTC)
+
 
 def utc_now() -> datetime:
     """Get current UTC datetime."""

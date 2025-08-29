@@ -38,9 +38,7 @@ class Experiment(Base):
 
     # Consistent UTC timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default_factory=utc_now, onupdate=utc_now
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=utc_now, onupdate=utc_now)
 
     # Relationships last
     layer: Mapped["Layer"] = relationship("Layer", back_populates="experiments", init=False)
@@ -55,7 +53,7 @@ class Experiment(Base):
         end_date: datetime | None = None,
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
-        **kw
+        **kw,
     ):
         # Convert all datetimes to UTC before storing
         kw["variants"] = json.dumps(variants)

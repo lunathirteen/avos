@@ -19,15 +19,8 @@ class Layer(Base):
     total_traffic_percentage: Mapped[float] = mapped_column(Float, default=100.0)
 
     # UTC timezone-aware timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default_factory=utc_now
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default_factory=utc_now,
-        onupdate=utc_now
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=utc_now, onupdate=utc_now)
 
     slots: Mapped[List["LayerSlot"]] = relationship(
         "LayerSlot", back_populates="layer", cascade="all, delete-orphan", default_factory=list

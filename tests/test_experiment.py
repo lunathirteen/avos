@@ -26,12 +26,7 @@ def db_session():
 @pytest.fixture
 def sample_layer(db_session):
     """Create a sample layer for testing."""
-    layer = LayerService.create_layer(
-        db_session,
-        layer_id="test_layer",
-        layer_salt="test_salt",
-        total_slots=100
-    )
+    layer = LayerService.create_layer(db_session, layer_id="test_layer", layer_salt="test_salt", total_slots=100)
     return layer
 
 
@@ -46,7 +41,7 @@ def sample_experiment_data():
         "traffic_allocation": {"control": 50, "treatment": 50},
         "traffic_percentage": 100.0,
         "start_date": utc_now() - timedelta(days=1),  # UTC
-        "end_date": utc_now() + timedelta(days=7),    # UTC
+        "end_date": utc_now() + timedelta(days=7),  # UTC
         "status": ExperimentStatus.ACTIVE,
         "priority": 1,
     }
@@ -63,9 +58,7 @@ class TestExperimentCreation:
 
         # Verify experiment was saved
         saved_exp = db_session.execute(
-            select(Experiment).where(
-                Experiment.experiment_id=="test_exp_001"
-            )
+            select(Experiment).where(Experiment.experiment_id == "test_exp_001")
         ).scalar_one_or_none()
         assert saved_exp is not None
         assert saved_exp.name == "Homepage Button Test"
@@ -78,9 +71,7 @@ class TestExperimentCreation:
         db_session.commit()
 
         saved_exp = db_session.execute(
-            select(Experiment).where(
-                Experiment.experiment_id=="test_exp_001"
-            )
+            select(Experiment).where(Experiment.experiment_id == "test_exp_001")
         ).scalar_one_or_none()
 
         # Check that raw database values are JSON strings
@@ -172,8 +163,12 @@ class TestExperimentValidation:
 
     def test_experiment_with_different_statuses(self, sample_experiment_data):
         """Test creating experiments with different statuses."""
-        statuses = [ExperimentStatus.DRAFT, ExperimentStatus.ACTIVE,
-                   ExperimentStatus.PAUSED, ExperimentStatus.COMPLETED]
+        statuses = [
+            ExperimentStatus.DRAFT,
+            ExperimentStatus.ACTIVE,
+            ExperimentStatus.PAUSED,
+            ExperimentStatus.COMPLETED,
+        ]
 
         for status in statuses:
             sample_experiment_data["experiment_id"] = f"exp_{status.value}"
@@ -213,12 +208,7 @@ class TestExperimentEdgeCases:
 
     def test_experiment_with_complex_traffic_allocation(self, sample_experiment_data):
         """Test experiment with complex traffic allocation."""
-        complex_allocation = {
-            "control": 25.5,
-            "variant_a": 25.5,
-            "variant_b": 24.0,
-            "variant_c": 25.0
-        }
+        complex_allocation = {"control": 25.5, "variant_a": 25.5, "variant_b": 24.0, "variant_c": 25.0}
 
         sample_experiment_data["variants"] = list(complex_allocation.keys())
         sample_experiment_data["traffic_allocation"] = complex_allocation
@@ -274,9 +264,7 @@ class TestExperimentIntegration:
 
         # Verify experiment is in database
         saved_exp = db_session.execute(
-            select(Experiment).where(
-                Experiment.experiment_id=="integration_exp"
-            )
+            select(Experiment).where(Experiment.experiment_id == "integration_exp")
         ).scalar_one_or_none()
         assert saved_exp is not None
         assert saved_exp.layer_id == "integration_layer"

@@ -51,22 +51,14 @@ class TestLayerCRUD:
         assert layer.total_traffic_percentage == 100.0  # default
 
         # Verify layer is in database
-        saved_layer = db_session.execute(
-            select(Layer).where(
-                Layer.layer_id=="layer_001"
-            )
-        ).scalar_one_or_none()
+        saved_layer = db_session.execute(select(Layer).where(Layer.layer_id == "layer_001")).scalar_one_or_none()
         assert saved_layer is not None
         assert saved_layer.layer_id == "layer_001"
 
     def test_create_layer_with_custom_values(self, db_session):
         """Test creating a layer with custom parameters."""
         layer = LayerService.create_layer(
-            db_session,
-            "custom_layer",
-            "custom_salt",
-            total_slots=50,
-            total_traffic_percentage=80.0
+            db_session, "custom_layer", "custom_salt", total_slots=50, total_traffic_percentage=80.0
         )
 
         assert layer.total_slots == 50
@@ -77,9 +69,7 @@ class TestLayerCRUD:
         layer = LayerService.create_layer(db_session, "slot_test", "salt", total_slots=20)
 
         # Check all slots were created
-        slots = db_session.execute(
-            select(LayerSlot).where(LayerSlot.layer_id == "slot_test")
-        ).scalars().all()
+        slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "slot_test")).scalars().all()
         assert len(slots) == 20
 
         # Check slot indices are correct
@@ -108,9 +98,7 @@ class TestLayerCRUD:
         LayerService.create_layer(db_session, "delete_test", "salt", total_slots=10)
 
         # Verify layer exists
-        layer = db_session.execute(
-            select(Layer).where(Layer.layer_id == "delete_test")
-        ).scalar_one_or_none()
+        layer = db_session.execute(select(Layer).where(Layer.layer_id == "delete_test")).scalar_one_or_none()
         assert layer is not None
 
         # Delete layer
@@ -118,15 +106,11 @@ class TestLayerCRUD:
         assert result is True
 
         # Verify layer is gone
-        layer = db_session.execute(
-            select(Layer).where(Layer.layer_id == "delete_test")
-        ).scalar_one_or_none()
+        layer = db_session.execute(select(Layer).where(Layer.layer_id == "delete_test")).scalar_one_or_none()
         assert layer is None
 
         # Verify slots are gone (cascade delete)
-        slots = db_session.execute(
-            select(LayerSlot).where(LayerSlot.layer_id == "delete_test")
-        ).scalars().all()
+        slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "delete_test")).scalars().all()
         assert len(slots) == 0
 
     def test_delete_layer_not_exists(self, db_session):
@@ -161,10 +145,7 @@ class TestExperimentCRUD:
         allocated_slots = db_session.execute(
             select(func.count())
             .select_from(LayerSlot)
-            .where(
-                LayerSlot.layer_id == "test_layer",
-                LayerSlot.experiment_id == "test_exp_001"
-            )
+            .where(LayerSlot.layer_id == "test_layer", LayerSlot.experiment_id == "test_exp_001")
         ).scalar()
         assert allocated_slots == 50
 
@@ -181,8 +162,7 @@ class TestExperimentCRUD:
         """Test adding experiment that would exceed traffic capacity."""
         # Create layer with limited traffic capacity
         layer = LayerService.create_layer(
-            db_session, "test_layer", "salt",
-            total_slots=100, total_traffic_percentage=60.0
+            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=60.0
         )
 
         # Add first experiment (50% traffic)
@@ -202,11 +182,7 @@ class TestExperimentCRUD:
         layer = LayerService.create_layer(db_session, "test_layer", "salt", total_slots=10)
 
         # Manually occupy 8 slots
-        slots = db_session.execute(
-            select(LayerSlot)
-            .where(LayerSlot.layer_id == "test_layer")
-            .limit(8)
-        ).scalars().all()
+        slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "test_layer").limit(8)).scalars().all()
         for slot in slots:
             slot.experiment_id = "existing_exp"
         db_session.commit()
@@ -219,8 +195,7 @@ class TestExperimentCRUD:
     def test_add_experiment_excludes_completed_experiments_from_traffic(self, db_session, sample_experiment_data):
         """Test that completed experiments don't count toward traffic limit."""
         layer = LayerService.create_layer(
-            db_session, "test_layer", "salt",
-            total_slots=100, total_traffic_percentage=60.0
+            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=60.0
         )
 
         # Add completed experiment (50% traffic - shouldn't count)
@@ -244,16 +219,16 @@ class TestExperimentCRUD:
         LayerService.add_experiment(db_session, layer, experiment)
 
         # Verify experiment and slots are allocated
-        assert db_session.execute(
-            select(Experiment).where(Experiment.experiment_id == "test_exp_001")
-        ).scalar_one_or_none() is not None
+        assert (
+            db_session.execute(
+                select(Experiment).where(Experiment.experiment_id == "test_exp_001")
+            ).scalar_one_or_none()
+            is not None
+        )
         allocated_slots_before = db_session.execute(
             select(func.count())
             .select_from(LayerSlot)
-            .where(
-                LayerSlot.layer_id == "test_layer",
-                LayerSlot.experiment_id == "test_exp_001"
-            )
+            .where(LayerSlot.layer_id == "test_layer", LayerSlot.experiment_id == "test_exp_001")
         ).scalar()
         assert allocated_slots_before > 0
 
@@ -271,10 +246,7 @@ class TestExperimentCRUD:
         allocated_slots_after = db_session.execute(
             select(func.count())
             .select_from(LayerSlot)
-            .where(
-                LayerSlot.layer_id == "test_layer",
-                LayerSlot.experiment_id == "test_exp_001"
-            )
+            .where(LayerSlot.layer_id == "test_layer", LayerSlot.experiment_id == "test_exp_001")
         ).scalar()
         assert allocated_slots_after == 0
 
@@ -339,7 +311,7 @@ class TestLayerInfo:
         assert info["layer_id"] == "info_layer"
         assert info["total_slots"] == 100
         assert info["free_slots"] == 20  # 100 - 50 - 30
-        assert info["used_slots"] == 80   # 50 + 30
+        assert info["used_slots"] == 80  # 50 + 30
         assert info["utilization_percentage"] == 80.0
         assert info["active_experiments"] == 1  # Only one ACTIVE experiment
         assert info["experiment_slot_counts"]["test_exp_001"] == 50
@@ -370,9 +342,7 @@ class TestLayerServiceEdgeCases:
         layer = LayerService.create_layer(db_session, "zero_slots", "salt", total_slots=0)
 
         assert layer.total_slots == 0
-        slots = db_session.execute(
-            select(LayerSlot).where(LayerSlot.layer_id == "zero_slots")
-        ).scalars().all()
+        slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "zero_slots")).scalars().all()
         assert len(slots) == 0
 
     def test_add_experiment_zero_traffic_percentage(self, db_session, sample_experiment_data):
@@ -390,10 +360,7 @@ class TestLayerServiceEdgeCases:
         allocated_slots = db_session.execute(
             select(func.count())
             .select_from(LayerSlot)
-            .where(
-                LayerSlot.layer_id == "zero_traffic",
-                LayerSlot.experiment_id == "test_exp_001"
-            )
+            .where(LayerSlot.layer_id == "zero_traffic", LayerSlot.experiment_id == "test_exp_001")
         ).scalar()
         assert allocated_slots == 0
 
@@ -412,10 +379,7 @@ class TestLayerServiceEdgeCases:
         allocated_slots = db_session.execute(
             select(func.count())
             .select_from(LayerSlot)
-            .where(
-                LayerSlot.layer_id == "full_traffic",
-                LayerSlot.experiment_id == "test_exp_001"
-            )
+            .where(LayerSlot.layer_id == "full_traffic", LayerSlot.experiment_id == "test_exp_001")
         ).scalar()
         assert allocated_slots == 50
 

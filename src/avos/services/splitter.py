@@ -13,9 +13,7 @@ class HashBasedSplitter:
     def __init__(self, experiment_id: str):
         self.exp_id = experiment_id
 
-    def assign_variant(
-        self, unit_id: str | int, variants: List[str], allocations: Iterable[float]
-    ) -> str:
+    def assign_variant(self, unit_id: str | int, variants: List[str], allocations: Iterable[float]) -> str:
         buckets = []
         total = 0.0
         for v, p in zip(variants, allocations):
@@ -35,23 +33,14 @@ class AssignmentService:
     """User assignment and variant allocation logic."""
 
     @staticmethod
-    def get_user_assignment(
-        session: Session,
-        layer: Layer,
-        unit_id: str | int
-    ) -> Dict[str, Any]:
+    def get_user_assignment(session: Session, layer: Layer, unit_id: str | int) -> Dict[str, Any]:
         """Determine which experiment and variant a user should see."""
         # Calculate which slot this user belongs to
-        slot_index = AssignmentService._calculate_user_slot(
-            layer.layer_salt, layer.total_slots, unit_id
-        )
+        slot_index = AssignmentService._calculate_user_slot(layer.layer_salt, layer.total_slots, unit_id)
 
         # Find the slot and check if it's assigned to an experiment
         slot = session.execute(
-            select(LayerSlot).where(
-                LayerSlot.layer_id == layer.layer_id,
-                LayerSlot.slot_index == slot_index
-            )
+            select(LayerSlot).where(LayerSlot.layer_id == layer.layer_id, LayerSlot.slot_index == slot_index)
         ).scalar_one_or_none()
 
         if not slot or not slot.experiment_id:
@@ -79,9 +68,7 @@ class AssignmentService:
         # Use splitter to determine variant within the experiment
         splitter = HashBasedSplitter(experiment_id=experiment.experiment_id)
         variant = splitter.assign_variant(
-            unit_id,
-            experiment.get_variant_list(),
-            list(experiment.get_traffic_dict().values())
+            unit_id, experiment.get_variant_list(), list(experiment.get_traffic_dict().values())
         )
 
         return {
@@ -96,16 +83,12 @@ class AssignmentService:
 
     @staticmethod
     def get_user_assignments_bulk(
-        session: Session,
-        layer: Layer,
-        unit_ids: list[str | int]
+        session: Session, layer: Layer, unit_ids: list[str | int]
     ) -> Dict[str | int, Dict[str, Any]]:
         """Get assignments for multiple users efficiently."""
         assignments = {}
         for unit_id in unit_ids:
-            assignments[unit_id] = AssignmentService.get_user_assignment(
-                session, layer, unit_id
-            )
+            assignments[unit_id] = AssignmentService.get_user_assignment(session, layer, unit_id)
         return assignments
 
     @staticmethod
@@ -118,9 +101,7 @@ class AssignmentService:
 
     @staticmethod
     def preview_assignment_distribution(
-        session: Session,
-        layer: Layer,
-        sample_user_ids: list[str | int]
+        session: Session, layer: Layer, sample_user_ids: list[str | int]
     ) -> Dict[str, Any]:
         """Preview how users would be distributed across experiments."""
         distribution = {}
