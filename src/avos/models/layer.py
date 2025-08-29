@@ -19,7 +19,7 @@ class Layer(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default_factory=lambda: datetime.now(UTC), onupdate=datetime.now
+        DateTime(timezone=True), default_factory=lambda: datetime.now(UTC), onupdate=datetime.now(UTC)
     )
 
     slots: Mapped[List["LayerSlot"]] = relationship(
@@ -37,12 +37,11 @@ class LayerSlot(Base):
     slot_index: Mapped[int] = mapped_column(Integer, primary_key=True)
     experiment_id: Mapped[str | None] = mapped_column(String, ForeignKey("experiments.experiment_id"))
 
-    # scalar back-refs – leave them out of the constructor
     layer: Mapped["Layer"] = relationship(
         "Layer",
         back_populates="slots",
         uselist=False,
-        init=False,  #  ← key line
+        init=False,
         repr=False,
     )
     experiment: Mapped["Experiment"] = relationship(
