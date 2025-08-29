@@ -63,7 +63,7 @@ class AssignmentService:
             }
 
         # Get the experiment and determine variant
-        experiment = session.query(Experiment).get(slot.experiment_id)
+        experiment = session.get(Experiment, slot.experiment_id)
         if not experiment or not experiment.is_active(utc_now()):
             return {
                 "unit_id": str(unit_id),
