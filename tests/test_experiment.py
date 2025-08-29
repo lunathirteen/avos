@@ -8,6 +8,7 @@ from avos.models.base import Base
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
+from avos.utils.datetime_utils import utc_now
 
 
 @pytest.fixture
@@ -38,14 +39,14 @@ def sample_layer(db_session):
 def sample_experiment_data():
     """Sample experiment data for testing."""
     return {
-        "experiment_id": "exp_001",
+        "experiment_id": "test_exp_001",
         "layer_id": "test_layer",
         "name": "Homepage Button Test",
-        "variants": ["control", "red_button", "blue_button"],
-        "traffic_allocation": {"control": 40, "red_button": 30, "blue_button": 30},
+        "variants": ["control", "treatment"],
+        "traffic_allocation": {"control": 50, "treatment": 50},
         "traffic_percentage": 100.0,
-        "start_date": datetime.now(UTC) - timedelta(days=1),
-        "end_date": datetime.now(UTC) + timedelta(days=7),
+        "start_date": utc_now() - timedelta(days=1),  # UTC
+        "end_date": utc_now() + timedelta(days=7),    # UTC
         "status": ExperimentStatus.ACTIVE,
         "priority": 1,
     }

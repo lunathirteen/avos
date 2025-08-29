@@ -1,11 +1,12 @@
 from __future__ import annotations
-from datetime import datetime, UTC
-from typing import List, Optional
+from datetime import datetime
+from typing import List
 
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import String, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from avos.models.base import Base
+from avos.utils.datetime_utils import utc_now
 
 
 class Layer(Base):
@@ -17,9 +18,15 @@ class Layer(Base):
     total_slots: Mapped[int] = mapped_column(Integer, default=100)
     total_traffic_percentage: Mapped[float] = mapped_column(Float, default=100.0)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
+    # UTC timezone-aware timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default_factory=utc_now
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default_factory=lambda: datetime.now(UTC), onupdate=datetime.now(UTC)
+        DateTime(timezone=True),
+        default_factory=utc_now,
+        onupdate=utc_now
     )
 
     slots: Mapped[List["LayerSlot"]] = relationship(

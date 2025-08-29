@@ -1,12 +1,13 @@
 from __future__ import annotations
 import json
-from datetime import datetime, UTC
+from datetime import datetime
 from enum import Enum
 from typing import List, Dict
 
 from sqlalchemy import String, Float, DateTime, Integer, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from avos.models.base import Base
+from avos.utils.datetime_utils import to_utc, utc_now, UTC
 
 
 class ExperimentStatus(Enum):
@@ -27,8 +28,8 @@ class Experiment(Base):
     traffic_allocation: Mapped[str] = mapped_column(String, nullable=False)
 
     # Optional fields
-    start_date: Mapped[datetime | None] = mapped_column(DateTime)
-    end_date: Mapped[datetime | None] = mapped_column(DateTime)
+    start_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Fields with defaults
     traffic_percentage: Mapped[float] = mapped_column(Float, default=100.0)
@@ -36,9 +37,9 @@ class Experiment(Base):
     priority: Mapped[int] = mapped_column(Integer, default=0)
 
     # Consistent UTC timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default_factory=lambda: datetime.now(UTC), onupdate=datetime.now(UTC)
+        DateTime(timezone=True), default_factory=utc_now, onupdate=utc_now
     )
 
     # Relationships last
@@ -50,16 +51,19 @@ class Experiment(Base):
         *,
         variants: List[str],
         traffic_allocation: Dict[str, float],
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
-        **kw,
+        **kw
     ):
+        # Convert all datetimes to UTC before storing
         kw["variants"] = json.dumps(variants)
         kw["traffic_allocation"] = json.dumps(traffic_allocation)
-
-        # Explicitly set timestamps if not provided
-        kw["created_at"] = created_at or datetime.now(UTC)
-        kw["updated_at"] = updated_at or datetime.now(UTC)
+        kw["start_date"] = to_utc(start_date)
+        kw["end_date"] = to_utc(end_date)
+        kw["created_at"] = to_utc(created_at) or utc_now()
+        kw["updated_at"] = to_utc(updated_at) or utc_now()
 
         super().__init__(**kw)
 
@@ -71,11 +75,17 @@ class Experiment(Base):
         return json.loads(self.traffic_allocation)
 
     def is_active(self, now: datetime | None = None) -> bool:
+        """Check if experiment is active at the given time (UTC)."""
         if self.status != ExperimentStatus.ACTIVE:
             return False
-        now = now or datetime.now(UTC)
-        if self.start_date and now < self.start_date:
+
+        # Ensure we're working with UTC datetime
+        now = to_utc(now) or utc_now()
+
+        # All stored datetimes are UTC timezone-aware, so comparison is safe
+        if self.start_date and now < to_utc(self.start_date):
             return False
-        if self.end_date and now > self.end_date:
+        if self.end_date and now > to_utc(self.end_date):
             return False
+
         return True
