@@ -8,7 +8,7 @@ from avos.models.base import Base
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
-from avos.splitter.splitter import HashBasedSplitter, AssignmentService
+from avos.services.splitter import HashBasedSplitter, AssignmentService
 from avos.utils.datetime_utils import utc_now
 
 
@@ -323,7 +323,7 @@ class TestAssignmentService:
 class TestAssignmentServiceMocked:
     """Test AssignmentService with mocked dependencies."""
 
-    @patch('avos.splitter.splitter.HashBasedSplitter.assign_variant')
+    @patch('avos.services.splitter.HashBasedSplitter.assign_variant')
     def test_get_user_assignment_variant_assignment_called(self, mock_assign_variant, db_session, sample_layer_with_experiment):
         """Test that variant assignment is called with correct parameters."""
         mock_assign_variant.return_value = "mocked_variant"
