@@ -13,7 +13,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest", "black", "flake8"
+    "black>=25.1.0",
+    "flake8>=7.3.0",
+    "mypy>=1.17.1",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
 ]
 
 [build-system]
@@ -22,12 +26,3 @@ build-backend = "uv_build"
 
 [tool.black]
 line-length = 120
-
-[dependency-groups]
-dev = [
-    "black>=25.1.0",
-    "flake8>=7.3.0",
-    "mypy>=1.17.1",
-    "pytest>=8.4.1",
-    "pytest-cov>=6.2.1",
-]
