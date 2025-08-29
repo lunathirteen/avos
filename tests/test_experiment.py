@@ -1,6 +1,6 @@
 import pytest
 import json
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -8,7 +8,7 @@ from avos.models.base import Base
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
-from avos.utils.datetime_utils import utc_now
+from avos.utils.datetime_utils import utc_now, UTC
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ class TestExperimentCreation:
         db_session.commit()
 
         # Verify experiment was saved
-        saved_exp = db_session.query(Experiment).filter_by(experiment_id="exp_001").first()
+        saved_exp = db_session.query(Experiment).filter_by(experiment_id="test_exp_001").first()
         assert saved_exp is not None
         assert saved_exp.name == "Homepage Button Test"
         assert saved_exp.layer_id == "test_layer"
@@ -73,7 +73,7 @@ class TestExperimentCreation:
         db_session.add(exp)
         db_session.commit()
 
-        saved_exp = db_session.query(Experiment).filter_by(experiment_id="exp_001").first()
+        saved_exp = db_session.query(Experiment).filter_by(experiment_id="test_exp_001").first()
 
         # Check that raw database values are JSON strings
         assert isinstance(saved_exp.variants, str)
@@ -83,15 +83,15 @@ class TestExperimentCreation:
         variants_parsed = json.loads(saved_exp.variants)
         traffic_parsed = json.loads(saved_exp.traffic_allocation)
 
-        assert variants_parsed == ["control", "red_button", "blue_button"]
-        assert traffic_parsed == {"control": 40, "red_button": 30, "blue_button": 30}
+        assert variants_parsed == ["control", "treatment"]
+        assert traffic_parsed == {"control": 50, "treatment": 50}
 
     def test_experiment_helper_methods(self, db_session, sample_layer, sample_experiment_data):
         """Test get_variant_list() and get_traffic_dict() helper methods."""
         exp = Experiment(**sample_experiment_data)
 
-        assert exp.get_variant_list() == ["control", "red_button", "blue_button"]
-        assert exp.get_traffic_dict() == {"control": 40, "red_button": 30, "blue_button": 30}
+        assert exp.get_variant_list() == ["control", "treatment"]
+        assert exp.get_traffic_dict() == {"control": 50, "treatment": 50}
 
     def test_experiment_timestamps_auto_populated(self, db_session, sample_layer, sample_experiment_data):
         """Test that created_at and updated_at are automatically populated."""
