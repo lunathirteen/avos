@@ -1,7 +1,7 @@
 import pytest
 import json
 from datetime import datetime, timedelta
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from avos.models.base import Base
@@ -62,7 +62,11 @@ class TestExperimentCreation:
         db_session.commit()
 
         # Verify experiment was saved
-        saved_exp = db_session.query(Experiment).filter_by(experiment_id="test_exp_001").first()
+        saved_exp = db_session.execute(
+            select(Experiment).where(
+                Experiment.experiment_id=="test_exp_001"
+            )
+        ).scalar_one_or_none()
         assert saved_exp is not None
         assert saved_exp.name == "Homepage Button Test"
         assert saved_exp.layer_id == "test_layer"
@@ -73,7 +77,11 @@ class TestExperimentCreation:
         db_session.add(exp)
         db_session.commit()
 
-        saved_exp = db_session.query(Experiment).filter_by(experiment_id="test_exp_001").first()
+        saved_exp = db_session.execute(
+            select(Experiment).where(
+                Experiment.experiment_id=="test_exp_001"
+            )
+        ).scalar_one_or_none()
 
         # Check that raw database values are JSON strings
         assert isinstance(saved_exp.variants, str)
@@ -265,6 +273,10 @@ class TestExperimentIntegration:
         assert success is True
 
         # Verify experiment is in database
-        saved_exp = db_session.query(Experiment).filter_by(experiment_id="integration_exp").first()
+        saved_exp = db_session.execute(
+            select(Experiment).where(
+                Experiment.experiment_id=="integration_exp"
+            )
+        ).scalar_one_or_none()
         assert saved_exp is not None
         assert saved_exp.layer_id == "integration_layer"
