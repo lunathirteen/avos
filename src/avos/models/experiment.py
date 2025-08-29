@@ -80,13 +80,19 @@ class Experiment(Base):
         if self.status != ExperimentStatus.ACTIVE:
             return False
 
-        # Ensure we're working with UTC datetime
-        now = to_utc(now) or utc_now()
+        # Ensure we get a concrete datetime object
+        current_time: datetime = to_utc(now) or utc_now()
 
-        # All stored datetimes are UTC timezone-aware, so comparison is safe
-        if self.start_date and now < to_utc(self.start_date):
-            return False
-        if self.end_date and now > to_utc(self.end_date):
-            return False
+        # Convert and check start_date
+        if self.start_date is not None:
+            start_date_utc = to_utc(self.start_date)
+            if start_date_utc is not None and current_time < start_date_utc:
+                return False
+
+        # Convert and check end_date
+        if self.end_date is not None:
+            end_date_utc = to_utc(self.end_date)
+            if end_date_utc is not None and current_time > end_date_utc:
+                return False
 
         return True

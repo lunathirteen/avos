@@ -126,20 +126,22 @@ class LayerService:
         """Get detailed information about layer utilization."""
         total_slots = layer.total_slots
 
-        free_slots = session.execute(
+        free_slots_result = session.execute(
             select(func.count())
             .select_from(LayerSlot)
             .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id.is_(None))
         ).scalar()
+        free_slots = free_slots_result or 0
 
         # Count slots per experiment
         experiment_slot_counts = {}
         for experiment in layer.experiments:
-            count = session.execute(
+            count_result = session.execute(
                 select(func.count())
                 .select_from(LayerSlot)
                 .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id == experiment.experiment_id)
             ).scalar()
+            count = count_result or 0
             experiment_slot_counts[experiment.experiment_id] = count
 
         return {
@@ -155,7 +157,8 @@ class LayerService:
     @staticmethod
     def get_layers_by_prefix(session: Session, prefix: str) -> list[Layer]:
         """Get all layers with IDs starting with prefix."""
-        return session.execute(select(Layer).where(Layer.layer_id.like(f"{prefix}%"))).scalars().all()
+        result = session.execute(select(Layer).where(Layer.layer_id.like(f"{prefix}%"))).scalars().all()
+        return list(result)
 
     @staticmethod
     def bulk_free_experiment_slots(session: Session, layer_id: str, experiment_id: str) -> int:

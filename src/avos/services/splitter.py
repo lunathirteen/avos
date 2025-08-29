@@ -104,7 +104,7 @@ class AssignmentService:
         session: Session, layer: Layer, sample_user_ids: list[str | int]
     ) -> Dict[str, Any]:
         """Preview how users would be distributed across experiments."""
-        distribution = {}
+        distribution: Dict[str, int] = {}
         unassigned_count = 0
 
         for user_id in sample_user_ids:
