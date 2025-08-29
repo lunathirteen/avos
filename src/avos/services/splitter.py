@@ -46,11 +46,12 @@ class AssignmentService:
         )
 
         # Find the slot and check if it's assigned to an experiment
-        slot = (
-            session.query(LayerSlot)
-            .filter_by(layer_id=layer.layer_id, slot_index=slot_index)
-            .first()
-        )
+        slot = session.execute(
+            select(LayerSlot).where(
+                LayerSlot.layer_id == layer.layer_id,
+                LayerSlot.slot_index == slot_index
+            )
+        ).scalar_one_or_none()
 
         if not slot or not slot.experiment_id:
             return {
