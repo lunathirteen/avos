@@ -30,7 +30,7 @@ def main():
         layer_id="homepage_hero",
         layer_salt="homepage_salt_2025",
         total_slots=100,  # High capacity for main page
-        total_traffic_percentage=100.0
+        total_traffic_percentage=100.0,
     )
 
     # Layer 2: Checkout Flow (Lower Traffic, High Value)
@@ -39,8 +39,8 @@ def main():
         session,
         layer_id="checkout_flow",
         layer_salt="checkout_salt_2025",
-        total_slots=100,   # Lower traffic but critical funnel
-        total_traffic_percentage=100.0
+        total_slots=100,  # Lower traffic but critical funnel
+        total_traffic_percentage=100.0,
     )
 
     # Layer 3: Product Recommendation Engine
@@ -50,7 +50,7 @@ def main():
         layer_id="product_recommendations",
         layer_salt="recs_salt_2025",
         total_slots=100,
-        total_traffic_percentage=80.0  # Only 80% get experimental recommendations
+        total_traffic_percentage=80.0,  # Only 80% get experimental recommendations
     )
 
     # =============================================================================
@@ -68,7 +68,7 @@ def main():
         start_date=utc_now() - timedelta(hours=2),
         end_date=utc_now() + timedelta(days=14),
         status=ExperimentStatus.ACTIVE,
-        priority=1
+        priority=1,
     )
 
     success = LayerService.add_experiment(session, homepage_layer, hero_button_exp)
@@ -89,7 +89,7 @@ def main():
         start_date=utc_now() - timedelta(days=1),
         end_date=utc_now() + timedelta(days=21),
         status=ExperimentStatus.ACTIVE,
-        priority=2
+        priority=2,
     )
 
     success = LayerService.add_experiment(session, homepage_layer, layout_exp)
@@ -110,7 +110,7 @@ def main():
         start_date=utc_now() - timedelta(hours=6),
         end_date=utc_now() + timedelta(days=10),
         status=ExperimentStatus.ACTIVE,
-        priority=1
+        priority=1,
     )
 
     success = LayerService.add_experiment(session, checkout_layer, payment_exp)
@@ -126,12 +126,17 @@ def main():
         layer_id="product_recommendations",
         name="ML Recommendation Algorithm v3.0",
         variants=["collaborative_filtering", "deep_learning_v2", "hybrid_ensemble", "trending_boost"],
-        traffic_allocation={"collaborative_filtering": 25, "deep_learning_v2": 35, "hybrid_ensemble": 25, "trending_boost": 15},
+        traffic_allocation={
+            "collaborative_filtering": 25,
+            "deep_learning_v2": 35,
+            "hybrid_ensemble": 25,
+            "trending_boost": 15,
+        },
         traffic_percentage=95.0,  # Almost all recommendation traffic (95% of 80% layer capacity)
         start_date=utc_now() - timedelta(days=3),
         end_date=utc_now() + timedelta(days=30),
         status=ExperimentStatus.ACTIVE,
-        priority=1
+        priority=1,
     )
 
     success = LayerService.add_experiment(session, recommendations_layer, ml_recs_exp)
@@ -150,9 +155,9 @@ def main():
         traffic_allocation={"discount_percent": 30, "limited_time": 25, "countdown_timer": 25, "social_proof": 20},
         traffic_percentage=10.0,  # Small remaining capacity (total now: 95%)
         start_date=utc_now() + timedelta(days=2),  # Starts in future
-        end_date=utc_now() + timedelta(days=5),    # Short campaign
+        end_date=utc_now() + timedelta(days=5),  # Short campaign
         status=ExperimentStatus.ACTIVE,
-        priority=3
+        priority=3,
     )
 
     success = LayerService.add_experiment(session, homepage_layer, seasonal_exp)
@@ -165,7 +170,11 @@ def main():
     print("\n📊 LAYER UTILIZATION ANALYSIS")
     print("=" * 50)
 
-    for layer_name, layer in [("Homepage", homepage_layer), ("Checkout", checkout_layer), ("Recommendations", recommendations_layer)]:
+    for layer_name, layer in [
+        ("Homepage", homepage_layer),
+        ("Checkout", checkout_layer),
+        ("Recommendations", recommendations_layer),
+    ]:
         info = LayerService.get_layer_info(session, layer)
         print(f"\n🎯 {layer_name} Layer ({layer.layer_id}):")
         print(f"   Total Slots: {info['total_slots']:,}")
@@ -174,7 +183,7 @@ def main():
         print(f"   Utilization: {info['utilization_percentage']:.1f}%")
         print(f"   Active Experiments: {info['active_experiments']}")
         print(f"   Slot Distribution:")
-        for exp_id, slot_count in info['experiment_slot_counts'].items():
+        for exp_id, slot_count in info["experiment_slot_counts"].items():
             print(f"      {exp_id}: {slot_count:,} slots")
 
     # =============================================================================
@@ -186,29 +195,31 @@ def main():
 
     # Simulate different user types
     user_scenarios = {
-        "homepage_visitors": list(range(1000, 1200)),       # 200 homepage visitors
-        "checkout_users": list(range(5000, 5050)),          # 50 checkout users
-        "product_browsers": list(range(8000, 8100)),        # 100 product page visitors
-        "mobile_users": [f"mobile_{i}" for i in range(75)], # 75 mobile users
-        "returning_customers": [f"customer_{i}" for i in range(2000, 2025)]  # 25 returning customers
+        "homepage_visitors": list(range(1000, 1200)),  # 200 homepage visitors
+        "checkout_users": list(range(5000, 5050)),  # 50 checkout users
+        "product_browsers": list(range(8000, 8100)),  # 100 product page visitors
+        "mobile_users": [f"mobile_{i}" for i in range(75)],  # 75 mobile users
+        "returning_customers": [f"customer_{i}" for i in range(2000, 2025)],  # 25 returning customers
     }
 
     for scenario_name, user_ids in user_scenarios.items():
         print(f"\n🔍 {scenario_name.replace('_', ' ').title()} Assignments:")
 
         # Homepage assignments
-        homepage_assignments = AssignmentService.get_user_assignments_bulk(session, homepage_layer, user_ids[:min(50, len(user_ids))])
+        homepage_assignments = AssignmentService.get_user_assignments_bulk(
+            session, homepage_layer, user_ids[: min(50, len(user_ids))]
+        )
         homepage_summary = AssignmentService.preview_assignment_distribution(session, homepage_layer, user_ids)
 
         print(f"   Homepage Layer - Assignment Rate: {homepage_summary['assignment_rate']:.1f}%")
-        for variant_key, count in homepage_summary['assignment_distribution'].items():
+        for variant_key, count in homepage_summary["assignment_distribution"].items():
             print(f"      {variant_key}: {count} users")
 
         # Checkout assignments (for relevant users)
         if scenario_name in ["checkout_users", "returning_customers"]:
             checkout_summary = AssignmentService.preview_assignment_distribution(session, checkout_layer, user_ids)
             print(f"   Checkout Layer - Assignment Rate: {checkout_summary['assignment_rate']:.1f}%")
-            for variant_key, count in checkout_summary['assignment_distribution'].items():
+            for variant_key, count in checkout_summary["assignment_distribution"].items():
                 print(f"      {variant_key}: {count} users")
 
     # =============================================================================
@@ -226,7 +237,7 @@ def main():
         # Homepage experience
         homepage_assignment = AssignmentService.get_user_assignment(session, homepage_layer, user_id)
         print(f"   📱 Homepage: {homepage_assignment['status']}")
-        if homepage_assignment['status'] == 'assigned':
+        if homepage_assignment["status"] == "assigned":
             print(f"      Experiment: {homepage_assignment['experiment_name']}")
             print(f"      Variant: {homepage_assignment['variant']}")
             print(f"      Slot: {homepage_assignment['slot_index']}")
@@ -234,14 +245,14 @@ def main():
         # Checkout experience (if user converts)
         checkout_assignment = AssignmentService.get_user_assignment(session, checkout_layer, user_id)
         print(f"   💳 Checkout: {checkout_assignment['status']}")
-        if checkout_assignment['status'] == 'assigned':
+        if checkout_assignment["status"] == "assigned":
             print(f"      Experiment: {checkout_assignment['experiment_name']}")
             print(f"      Variant: {checkout_assignment['variant']}")
 
         # Recommendations experience
         recs_assignment = AssignmentService.get_user_assignment(session, recommendations_layer, user_id)
         print(f"   🤖 Recommendations: {recs_assignment['status']}")
-        if recs_assignment['status'] == 'assigned':
+        if recs_assignment["status"] == "assigned":
             print(f"      Algorithm: {recs_assignment['variant']}")
 
     # =============================================================================
@@ -294,8 +305,8 @@ def main():
         print(f"   Unassigned Users: {distribution['unassigned_count']:,}")
 
         print("   Variant Distribution:")
-        total_assigned = sum(distribution['assignment_distribution'].values())
-        for variant_key, count in sorted(distribution['assignment_distribution'].items()):
+        total_assigned = sum(distribution["assignment_distribution"].values())
+        for variant_key, count in sorted(distribution["assignment_distribution"].items()):
             percentage = (count / total_assigned * 100) if total_assigned > 0 else 0
             print(f"      {variant_key}: {count:,} users ({percentage:.1f}%)")
 
@@ -315,7 +326,7 @@ def main():
         variants=["variant_a"],
         traffic_allocation={"variant_a": 100},
         traffic_percentage=110.0,  # This would exceed remaining capacity
-        status=ExperimentStatus.ACTIVE
+        status=ExperimentStatus.ACTIVE,
     )
 
     success = LayerService.add_experiment(session, homepage_layer, overload_exp)
@@ -327,7 +338,7 @@ def main():
     assignments = []
     for i in range(5):
         assignment = AssignmentService.get_user_assignment(session, homepage_layer, test_user)
-        assignments.append(assignment['variant'] if assignment['status'] == 'assigned' else None)
+        assignments.append(assignment["variant"] if assignment["status"] == "assigned" else None)
 
     all_same = len(set(assignments)) <= 1
     print(f"   User gets consistent assignment: {all_same} (variants: {set(assignments)})")
