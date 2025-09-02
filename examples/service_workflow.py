@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from avos.models.base import Base
-from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
 from avos.services.splitter import AssignmentService
@@ -182,7 +181,7 @@ def main():
         print(f"   Free Slots: {info['free_slots']:,}")
         print(f"   Utilization: {info['utilization_percentage']:.1f}%")
         print(f"   Active Experiments: {info['active_experiments']}")
-        print(f"   Slot Distribution:")
+        print("   Slot Distribution:")
         for exp_id, slot_count in info["experiment_slot_counts"].items():
             print(f"      {exp_id}: {slot_count:,} slots")
 
@@ -206,9 +205,7 @@ def main():
         print(f"\n🔍 {scenario_name.replace('_', ' ').title()} Assignments:")
 
         # Homepage assignments
-        homepage_assignments = AssignmentService.get_user_assignments_bulk(
-            session, homepage_layer, user_ids[: min(50, len(user_ids))]
-        )
+        AssignmentService.get_user_assignments_bulk(session, homepage_layer, user_ids[: min(50, len(user_ids))])
         homepage_summary = AssignmentService.preview_assignment_distribution(session, homepage_layer, user_ids)
 
         print(f"   Homepage Layer - Assignment Rate: {homepage_summary['assignment_rate']:.1f}%")
@@ -277,7 +274,7 @@ def main():
                 print(f"      → Status: {exp.status.value}")
 
     # Simulate removing a completed experiment
-    print(f"\n🔄 Removing completed experiment...")
+    print("\n🔄 Removing completed experiment...")
     removed = LayerService.remove_experiment(session, homepage_layer, "hero_button_colors_v2")
     print(f"   Experiment removed: {removed}")
 

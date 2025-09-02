@@ -33,21 +33,11 @@ def main():
         deviation = ((actual_prop - exp) / exp) * 100
         print(f"Group {i+1}: {obs:,} ({actual_prop:.1%}) vs {exp:.1%} expected ({deviation:+.1f}%)")
 
-
     print("\nTest multiple experiments at once")
     experiments_data = {
-        'checkout_flow_v2': {
-            'observed': [4850, 5150],
-            'expected': [0.5, 0.5]
-        },
-        'button_color_test': {
-            'observed': [1200, 800],  # Clear imbalance
-            'expected': [0.5, 0.5]
-        },
-        'pricing_experiment': {
-            'observed': [2500, 2000, 1500],  # Three groups
-            'expected': [0.4, 0.35, 0.25]
-        }
+        "checkout_flow_v2": {"observed": [4850, 5150], "expected": [0.5, 0.5]},
+        "button_color_test": {"observed": [1200, 800], "expected": [0.5, 0.5]},  # Clear imbalance
+        "pricing_experiment": {"observed": [2500, 2000, 1500], "expected": [0.4, 0.35, 0.25]},  # Three groups
     }
 
     results = srm_tester.batch_test(experiments_data)
@@ -61,7 +51,7 @@ def main():
         print(f"   Sample size: {result.total_sample_size:,}")
 
         if result.reject_null:
-            print(f"   ⚠️  Action required: Check randomization logic")
+            print("   ⚠️  Action required: Check randomization logic")
         print()
 
     print(srm_tester.significance_legend())

@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
-from unittest.mock import patch
-from avos.srm_tester import SRMTester, SRMResult
+from avos.srm_tester import SRMTester
 
 
 # Fixtures for common test setup
@@ -26,7 +25,7 @@ class TestBaseSRMTester:
         expected = [0.5, 0.5]
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == False
+        assert not result.reject_null
         assert result.severity == ""
         assert abs(result.p_value - 1.0) < 0.01
 
@@ -36,7 +35,7 @@ class TestBaseSRMTester:
         expected = [0.5, 0.5]
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == True
+        assert result.reject_null
         assert result.severity in ["*", "**", "***"]
 
     def test_slight_imbalance_no_srm(self, srm_tester):
@@ -45,7 +44,7 @@ class TestBaseSRMTester:
         expected = [0.5, 0.5]
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == False
+        assert not result.reject_null
         assert result.severity == ""
         assert result.p_value > 0.1
 
@@ -55,7 +54,7 @@ class TestBaseSRMTester:
         expected = [0.5, 0.5]
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == True
+        assert result.reject_null
         assert result.severity in ["**", "***"]
         assert result.p_value < 0.01
 
@@ -69,7 +68,7 @@ class TestMultiSRMTester:
         expected = [1 / 3, 1 / 3, 1 / 3]
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == False
+        assert not result.reject_null
         assert result.degrees_of_freedom == 2
         assert len(result.observed_counts) == 3
         assert len(result.expected_counts) == 3
@@ -80,7 +79,7 @@ class TestMultiSRMTester:
         expected = [0.5, 0.3, 0.2]
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == False
+        assert not result.reject_null
         assert result.total_sample_size == 1000
 
     def test_three_groups_srm_detected(self, srm_tester):
@@ -89,7 +88,7 @@ class TestMultiSRMTester:
         expected = [1 / 3, 1 / 3, 1 / 3]
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == True
+        assert result.reject_null
         assert result.severity in ["*", "**", "***"]
 
 
@@ -121,7 +120,7 @@ class TestValidationSRMTester:
         observed = [0, 100]
         result = srm_tester.test(observed)
 
-        assert result.reject_null == True  # Should detect severe imbalance
+        assert result.reject_null  # Should detect severe imbalance
         assert result.total_sample_size == 100
 
 
@@ -133,7 +132,7 @@ class TestDefaultBehaviorSRMTester:
         observed = [50, 50]
         result = srm_tester.test(observed)
 
-        assert result.reject_null == False
+        assert not result.reject_null
         assert result.severity == ""
 
     def test_default_expected_proportions_four_groups(self, srm_tester):
@@ -141,7 +140,7 @@ class TestDefaultBehaviorSRMTester:
         observed = [250, 250, 250, 250]
         result = srm_tester.test(observed)
 
-        assert result.reject_null == False
+        assert not result.reject_null
         assert result.expected_proportions == [0.25, 0.25, 0.25, 0.25]
 
     def test_expected_proportions_normalization(self, srm_tester):
@@ -158,4 +157,4 @@ class TestDefaultBehaviorSRMTester:
         expected = np.array([0.5, 0.5])
         result = srm_tester.test(observed, expected)
 
-        assert result.reject_null == False
+        assert not result.reject_null
