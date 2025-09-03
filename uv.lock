@@ -16,13 +16,9 @@ dev = [
     { name = "black" },
     { name = "flake8" },
     { name = "mypy" },
+    { name = "pandas-stubs" },
     { name = "pytest" },
     { name = "pytest-cov" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pandas-stubs" },
     { name = "scipy-stubs" },
 ]
 
@@ -31,18 +27,14 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=25.1.0" },
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=7.3.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
+    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.3.2.250827" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.1" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.2.1" },
     { name = "scipy", specifier = ">=1.16.1" },
+    { name = "scipy-stubs", marker = "extra == 'dev'", specifier = ">=1.16.1.1" },
     { name = "sqlalchemy", specifier = ">=2.0.43" },
 ]
 provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pandas-stubs", specifier = ">=2.3.2.250827" },
-    { name = "scipy-stubs", specifier = ">=1.16.1.1" },
-]
 
 [[package]]
 name = "black"
