@@ -41,6 +41,12 @@ class LayerService:
         return session.execute(select(Layer).where(Layer.layer_id == layer_id)).scalar_one_or_none()
 
     @staticmethod
+    def get_layers(session: Session) -> list[Layer]:
+        """Get layers."""
+        result = session.execute(select(Layer)).scalars().all()
+        return list(result)
+
+    @staticmethod
     def delete_layer(session: Session, layer_id: str) -> bool:
         """Delete layer and all its slots/experiments."""
         layer = session.execute(select(Layer).where(Layer.layer_id == layer_id)).scalar_one_or_none()
@@ -63,6 +69,7 @@ class LayerService:
         # Check traffic capacity
         current_traffic = sum(e.traffic_percentage for e in layer.experiments if e.status != ExperimentStatus.COMPLETED)
         if current_traffic + experiment.traffic_percentage > layer.total_traffic_percentage + 1e-9:
+            print("Traffic exceeds capacity")  # TODO replace with logging
             return False
 
         # Check slot availability
@@ -79,6 +86,7 @@ class LayerService:
         )
 
         if len(free_slots) < slots_needed:
+            print("Not enough free slots")  # TODO replace with logging
             return False
 
         # Assign slots to experiment
