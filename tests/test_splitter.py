@@ -27,7 +27,7 @@ def db_session():
 @pytest.fixture
 def mock_assignment_logger():
     """Mock the DuckDB assignment logger to avoid actual database operations during tests."""
-    with patch('avos.services.splitter.AssignmentService._assignment_logger') as mock_logger:
+    with patch("avos.services.splitter.AssignmentService._assignment_logger") as mock_logger:
         mock_logger.log_assignments = MagicMock()
         yield mock_logger
 
@@ -217,7 +217,9 @@ class TestAssignmentService:
         else:
             pytest.fail("Could not find a user assigned to the inactive experiment")
 
-    def test_get_user_assignment_assigned_with_logging(self, db_session, sample_layer_with_experiment, mock_assignment_logger):
+    def test_get_user_assignment_assigned_with_logging(
+        self, db_session, sample_layer_with_experiment, mock_assignment_logger
+    ):
         """Test successful user assignment."""
         layer, experiment = sample_layer_with_experiment
 
@@ -251,7 +253,9 @@ class TestAssignmentService:
         else:
             pytest.fail("Could not find a user assigned to the experiment")
 
-    def test_get_user_assignments_bulk_with_batch_logging(self, db_session, sample_layer_with_experiment, mock_assignment_logger):
+    def test_get_user_assignments_bulk_with_batch_logging(
+        self, db_session, sample_layer_with_experiment, mock_assignment_logger
+    ):
         """Test bulk user assignment with batch logging."""
         layer, experiment = sample_layer_with_experiment
 
@@ -270,7 +274,9 @@ class TestAssignmentService:
         # plus potentially once more for batch flushing
         assert mock_assignment_logger.log_assignments.call_count >= 1
 
-    def test_get_user_assignments_bulk_large_batch_logging(self, db_session, sample_layer_with_experiment, mock_assignment_logger):
+    def test_get_user_assignments_bulk_large_batch_logging(
+        self, db_session, sample_layer_with_experiment, mock_assignment_logger
+    ):
         """Test bulk assignment with large batch that triggers periodic flushing."""
         layer, experiment = sample_layer_with_experiment
 
@@ -283,7 +289,9 @@ class TestAssignmentService:
         # Verify batch logging was called multiple times due to periodic flushing
         assert mock_assignment_logger.log_assignments.call_count >= 2
 
-    def test_preview_assignment_distribution_with_logging(self, db_session, sample_layer_with_experiment, mock_assignment_logger):
+    def test_preview_assignment_distribution_with_logging(
+        self, db_session, sample_layer_with_experiment, mock_assignment_logger
+    ):
         """Test assignment distribution preview."""
         layer, experiment = sample_layer_with_experiment
 
@@ -305,7 +313,9 @@ class TestAssignmentService:
 class TestAssignmentServiceLoggingIntegration:
     """Test AssignmentService logging integration specifically."""
 
-    def test_logging_called_with_correct_assignment_data(self, db_session, sample_layer_with_experiment, mock_assignment_logger):
+    def test_logging_called_with_correct_assignment_data(
+        self, db_session, sample_layer_with_experiment, mock_assignment_logger
+    ):
         """Test that logging is called with correct assignment data structure."""
         layer, experiment = sample_layer_with_experiment
 
@@ -348,7 +358,9 @@ class TestAssignmentServiceLoggingIntegration:
         # Find user that would be assigned to inactive experiment
         for i in range(1000):
             user_id = f"user_{i}"
-            slot_index = AssignmentService._calculate_user_slot(inactive_layer.layer_salt, inactive_layer.total_slots, user_id)
+            slot_index = AssignmentService._calculate_user_slot(
+                inactive_layer.layer_salt, inactive_layer.total_slots, user_id
+            )
             slot = db_session.execute(
                 select(LayerSlot).where(LayerSlot.layer_id == "inactive", LayerSlot.slot_index == slot_index)
             ).scalar_one_or_none()
@@ -374,8 +386,8 @@ class TestAssignmentServiceLoggingIntegration:
         logger = AssignmentService._assignment_logger
 
         # Verify logger has required methods
-        assert hasattr(logger, 'log_assignments'), "Logger missing log_assignments method"
-        assert hasattr(logger, 'close'), "Logger missing close method"
+        assert hasattr(logger, "log_assignments"), "Logger missing log_assignments method"
+        assert hasattr(logger, "close"), "Logger missing close method"
 
         # Verify methods are callable
         assert callable(logger.log_assignments), "log_assignments is not callable"
@@ -429,7 +441,9 @@ class TestIntegrationScenarios:
         total_assigned = exp1_count + exp2_count
         assert total_assigned + unassigned_count == 100
 
-    def test_assignment_consistency_across_calls_with_logging(self, db_session, sample_layer_with_experiment, mock_assignment_logger):
+    def test_assignment_consistency_across_calls_with_logging(
+        self, db_session, sample_layer_with_experiment, mock_assignment_logger
+    ):
         """Test that assignment is consistent across multiple calls."""
         layer, experiment = sample_layer_with_experiment
 
@@ -458,7 +472,7 @@ class TestAssignmentServiceErrorHandling:
         """Test that assignment still works even if logging fails."""
         layer, experiment = sample_layer_with_experiment
 
-        with patch.object(AssignmentService._assignment_logger, 'log_assignments', side_effect=Exception("DB Error")):
+        with patch.object(AssignmentService._assignment_logger, "log_assignments", side_effect=Exception("DB Error")):
             # Assignment should still work despite logging failure
             with pytest.raises(Exception):
                 AssignmentService.get_user_assignment(db_session, layer, "user_123")
@@ -466,4 +480,4 @@ class TestAssignmentServiceErrorHandling:
     def test_logger_cleanup_method_exists(self):
         """Test that assignment logger has cleanup capabilities."""
         # Verify the logger has a close method for cleanup
-        assert hasattr(AssignmentService._assignment_logger, 'close')
+        assert hasattr(AssignmentService._assignment_logger, "close")
