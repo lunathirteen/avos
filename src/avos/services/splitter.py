@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment
+from avos.services.assignment_logger import DuckDBAssignmentLogger
 from avos.utils.datetime_utils import utc_now
 
 
@@ -32,6 +33,8 @@ class HashBasedSplitter:
 class AssignmentService:
     """User assignment and variant allocation logic."""
 
+    _assignment_logger = DuckDBAssignmentLogger()
+
     @staticmethod
     def get_user_assignment(session: Session, layer: Layer, unit_id: str | int) -> Dict[str, Any]:
         """Determine which experiment and variant a user should see."""
@@ -44,7 +47,7 @@ class AssignmentService:
         ).scalar_one_or_none()
 
         if not slot or not slot.experiment_id:
-            return {
+            assignment = {
                 "unit_id": str(unit_id),
                 "layer_id": layer.layer_id,
                 "slot_index": slot_index,
@@ -52,11 +55,13 @@ class AssignmentService:
                 "variant": None,
                 "status": "not_assigned",
             }
+            AssignmentService._assignment_logger.log_assignments([assignment])
+            return assignment
 
         # Get the experiment and determine variant
         experiment = session.get(Experiment, slot.experiment_id)
         if not experiment or not experiment.is_active(utc_now()):
-            return {
+            assignment = {
                 "unit_id": str(unit_id),
                 "layer_id": layer.layer_id,
                 "slot_index": slot_index,
@@ -64,6 +69,8 @@ class AssignmentService:
                 "variant": None,
                 "status": "experiment_inactive",
             }
+            AssignmentService._assignment_logger.log_assignments([assignment])
+            return assignment
 
         # Use splitter to determine variant within the experiment
         splitter = HashBasedSplitter(experiment_id=experiment.experiment_id)
@@ -71,7 +78,7 @@ class AssignmentService:
             unit_id, experiment.get_variant_list(), list(experiment.get_traffic_dict().values())
         )
 
-        return {
+        assignment = {
             "unit_id": str(unit_id),
             "layer_id": layer.layer_id,
             "slot_index": slot_index,
@@ -80,15 +87,29 @@ class AssignmentService:
             "variant": variant,
             "status": "assigned",
         }
+        AssignmentService._assignment_logger.log_assignments([assignment])
+        return assignment
 
     @staticmethod
     def get_user_assignments_bulk(
         session: Session, layer: Layer, unit_ids: list[str | int]
     ) -> Dict[str | int, Dict[str, Any]]:
-        """Get assignments for multiple users efficiently."""
         assignments = {}
+        batch = []
         for unit_id in unit_ids:
-            assignments[unit_id] = AssignmentService.get_user_assignment(session, layer, unit_id)
+            assignment = AssignmentService.get_user_assignment(session, layer, unit_id)
+            assignments[unit_id] = assignment
+            batch.append(assignment)
+
+            # For very large batches, flush periodically (e.g., every 1000)
+            if len(batch) >= 1000:
+                AssignmentService._assignment_logger.log_assignments(batch)
+                batch = []
+
+        # Flush any remaining assignments
+        if batch:
+            AssignmentService._assignment_logger.log_assignments(batch)
+
         return assignments
 
     @staticmethod
