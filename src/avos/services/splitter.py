@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment
-from avos.services.assignment_logger import DuckDBAssignmentLogger
+from avos.services.assignment_logger import MotherDuckAssignmentLogger
 from avos.utils.datetime_utils import utc_now
 
 
@@ -33,7 +33,7 @@ class HashBasedSplitter:
 class AssignmentService:
     """User assignment and variant allocation logic."""
 
-    _assignment_logger = DuckDBAssignmentLogger()
+    _assignment_logger = MotherDuckAssignmentLogger()
 
     @staticmethod
     def get_user_assignment(session: Session, layer: Layer, unit_id: str | int) -> Dict[str, Any]:
