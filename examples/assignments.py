@@ -7,6 +7,7 @@ from avos.models.base import Base
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
 from avos.services.assignment_service import AssignmentService
+from avos.services.assignment_logger import MotherDuckAssignmentLogger
 from avos.utils.datetime_utils import utc_now
 
 def main():
@@ -75,11 +76,15 @@ def main():
     print(f"✅ Payment experiment added: {success}")
 
     # Step 3: Single user assignment
+    assignment_logger = MotherDuckAssignmentLogger()
+
     print("\n👤 Single user assignment demo...")
 
     user_assignment = AssignmentService.assign_for_layer(
         session, homepage_layer, "user_12345"
     )
+    assignment_logger.log_assignments([user_assignment])
+
     print(f"User assignment: {user_assignment}")
 
     # Step 4: Bulk user assignments
@@ -89,6 +94,7 @@ def main():
     bulk_assignments = AssignmentService.assign_bulk_for_layer(
         session, homepage_layer, user_ids
     )
+    assignment_logger.log_assignments(list(bulk_assignments.values()))
 
     print(f"Processed {len(bulk_assignments)} user assignments")
 
@@ -103,10 +109,9 @@ def main():
     # Step 6: Query DuckDB assignment logs
     print("\n🗄️ Querying assignment logs from DuckDB...")
 
-    logger = AssignmentService._assignment_logger
 
     # Query variant counts for an experiment
-    variant_counts = logger.con.execute("""
+    variant_counts = assignment_logger.con.execute("""
         SELECT experiment_id, variant, COUNT(*) as count
         FROM user_assignments
         WHERE experiment_id = 'hero_button_colors'
@@ -120,7 +125,7 @@ def main():
         print(f"  {row[0]} - {row[1]}: {row[2]} users")
 
     # Query assignment status breakdown
-    status_breakdown = logger.con.execute("""
+    status_breakdown = assignment_logger.con.execute("""
         SELECT status, COUNT(*) as count
         FROM user_assignments
         GROUP BY status
@@ -131,7 +136,7 @@ def main():
         print(f"  {row[0]}: {row[1]} assignments")
 
     # Query recent assignments
-    recent_assignments = logger.con.execute("""
+    recent_assignments = assignment_logger.con.execute("""
         SELECT unit_id, experiment_id, variant, assignment_timestamp
         FROM user_assignments
         WHERE status = 'assigned'
@@ -155,7 +160,7 @@ def main():
 
     # Step 8: Cleanup
     print("\n🧹 Cleaning up...")
-    AssignmentService._assignment_logger.close()
+    assignment_logger.close()
     session.close()
 
     print("Demo completed successfully! 🎉")

@@ -5,14 +5,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment
-from avos.services.assignment_logger import MotherDuckAssignmentLogger
 from avos.services.splitter import HashBasedSplitter, RandomSplitter, StratifiedSplitter, GeoBasedSplitter
 from avos.utils.datetime_utils import utc_now
 
 class AssignmentService:
-    """Layer/slot AB assignment logic, with preview, batch, and extensible splitter support."""
-
-    _assignment_logger = MotherDuckAssignmentLogger()
+    """Layer/slot AB assignment logic, with preview and bulk assignment, extensible splitter support."""
 
     @staticmethod
     def assign_for_layer(
@@ -23,9 +20,7 @@ class AssignmentService:
         geo: Optional[str]=None,
         stratum: Optional[str]=None
     ) -> Dict[str, Any]:
-        # 1. Compute slot index deterministically
         slot_index = AssignmentService._calculate_user_slot(layer.layer_salt, layer.total_slots, unit_id)
-        # 2. Query slot assignment
         slot = session.execute(
             select(LayerSlot).where(
                 LayerSlot.layer_id == layer.layer_id,
@@ -33,15 +28,11 @@ class AssignmentService:
             )
         ).scalar_one_or_none()
         if not slot or not slot.experiment_id:
-            assignment = AssignmentService._make_assignment(unit_id, layer, slot_index, None, None, "not_assigned")
-            AssignmentService._assignment_logger.log_assignments([assignment])
-            return assignment
+            return AssignmentService._make_assignment(unit_id, layer, slot_index, None, None, "not_assigned")
 
         experiment = session.get(Experiment, slot.experiment_id)
         if not experiment or not experiment.is_active(utc_now()):
-            assignment = AssignmentService._make_assignment(unit_id, layer, slot_index, slot.experiment_id, None, "experiment_inactive")
-            AssignmentService._assignment_logger.log_assignments([assignment])
-            return assignment
+            return AssignmentService._make_assignment(unit_id, layer, slot_index, slot.experiment_id, None, "experiment_inactive")
 
         splitter = AssignmentService._select_splitter(
             experiment.splitter_type or "hash",
@@ -50,7 +41,6 @@ class AssignmentService:
             geo,
             stratum
         )
-        # Support all splitter signatures
         splitter_kwargs = {}
         if segment: splitter_kwargs['segment'] = segment
         if geo: splitter_kwargs['geo'] = geo
@@ -62,9 +52,7 @@ class AssignmentService:
             list(experiment.get_traffic_dict().values()),
             **splitter_kwargs
         )
-        assignment = AssignmentService._make_assignment(unit_id, layer, slot_index, experiment.experiment_id, variant, "assigned")
-        AssignmentService._assignment_logger.log_assignments([assignment])
-        return assignment
+        return AssignmentService._make_assignment(unit_id, layer, slot_index, experiment.experiment_id, variant, "assigned")
 
     @staticmethod
     def assign_bulk_for_layer(
@@ -75,18 +63,11 @@ class AssignmentService:
         geo: Optional[str]=None,
         stratum: Optional[str]=None
     ) -> Dict[str | int, Dict[str, Any]]:
-        """Bulk-assign and log for many users (flush periodically for thousands)."""
+        """Bulk-assign for many users."""
         assignments = {}
-        batch = []
         for uid in unit_ids:
             assignment = AssignmentService.assign_for_layer(session, layer, uid, segment=segment, geo=geo, stratum=stratum)
             assignments[uid] = assignment
-            batch.append(assignment)
-            if len(batch) >= 1000:
-                AssignmentService._assignment_logger.log_assignments(batch)
-                batch = []
-        if batch:
-            AssignmentService._assignment_logger.log_assignments(batch)
         return assignments
 
     @staticmethod
@@ -137,13 +118,11 @@ class AssignmentService:
             return StratifiedSplitter(experiment.experiment_id, experiment.get_stratum_allocations())
         elif splitter_type == "geo":
             return GeoBasedSplitter(experiment.experiment_id, experiment.get_geo_allocations())
-        # You can add additional mappings here as needed
         else:
             raise ValueError(f"Unknown splitter type: {splitter_type}")
 
     @staticmethod
     def _calculate_user_slot(layer_salt: str, total_slots: int, unit_id: str | int) -> int:
-        """Consistent hash to slot index for a layer."""
         hash_input = f"{unit_id}{layer_salt}".encode("utf-8")
         digest = hashlib.md5(hash_input).hexdigest()
         hash_value = int(digest, 16)
