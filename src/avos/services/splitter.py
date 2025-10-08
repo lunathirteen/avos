@@ -1,147 +1,65 @@
-from __future__ import annotations
+from abc import ABC, abstractmethod
+from typing import List, Iterable, Union
 import hashlib
-from typing import Dict, Any, Iterable, List  # Added List import
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-
-from avos.models.layer import Layer, LayerSlot
-from avos.models.experiment import Experiment
-from avos.services.assignment_logger import MotherDuckAssignmentLogger
-from avos.utils.datetime_utils import utc_now
 
 
-class HashBasedSplitter:
+class BaseSplitter(ABC):
+    """
+    Abstract base class for all splitters.
+    """
+
+    @abstractmethod
+    def assign_variant(
+        self,
+        unit_id: Union[str, int],
+        variants: List[str],
+        allocations: Iterable[float]
+    ) -> str:
+        """
+        Assign a unit to a variant based on provided allocations.
+        Args:
+            unit_id: Unique identifier for the subject (user/session/etc).
+            variants: List of variant names.
+            allocations: Iterable of allocation fractions (should sum to 1.0).
+        Returns:
+            variant name assigned to this unit.
+        """
+        pass
+
+class HashBasedSplitter(BaseSplitter):
+    """
+    Hash-based deterministic variant allocation.
+    """
+
     def __init__(self, experiment_id: str):
         self.exp_id = experiment_id
 
-    def assign_variant(self, unit_id: str | int, variants: List[str], allocations: Iterable[float]) -> str:
+    def assign_variant(
+        self,
+        unit_id: Union[str, int],
+        variants: List[str],
+        allocations: Iterable[float]
+    ) -> str:
+        # Validate inputs
+        allocations = list(allocations)
+        if not variants or len(variants) != len(allocations):
+            raise ValueError("Variants and allocations must have the same length")
+        total = sum(allocations)
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError("Allocations must sum to 1.0")
+
+        # Compute bucket boundaries
         buckets = []
-        total = 0.0
-        for v, p in zip(variants, allocations):
-            buckets.append((v, total + p))
-            total += p
+        cumulative = 0.0
+        for variant, alloc in zip(variants, allocations):
+            cumulative += alloc
+            buckets.append((variant, cumulative))
 
+        # Hash to [0, 1)
         digest = hashlib.md5(f"{unit_id}{self.exp_id}".encode()).hexdigest()
-        val = (int(digest, 16) % 10000) / 100.0  # 0-100
+        val = int(digest, 16) / 2**128
 
-        for v, upper in buckets:
-            if val < upper:
-                return v
-        return variants[-1]  # fallback
-
-
-class AssignmentService:
-    """User assignment and variant allocation logic."""
-
-    _assignment_logger = MotherDuckAssignmentLogger()
-
-    @staticmethod
-    def get_user_assignment(session: Session, layer: Layer, unit_id: str | int) -> Dict[str, Any]:
-        """Determine which experiment and variant a user should see."""
-        # Calculate which slot this user belongs to
-        slot_index = AssignmentService._calculate_user_slot(layer.layer_salt, layer.total_slots, unit_id)
-
-        # Find the slot and check if it's assigned to an experiment
-        slot = session.execute(
-            select(LayerSlot).where(LayerSlot.layer_id == layer.layer_id, LayerSlot.slot_index == slot_index)
-        ).scalar_one_or_none()
-
-        if not slot or not slot.experiment_id:
-            assignment = {
-                "unit_id": str(unit_id),
-                "layer_id": layer.layer_id,
-                "slot_index": slot_index,
-                "experiment_id": None,
-                "variant": None,
-                "status": "not_assigned",
-            }
-            AssignmentService._assignment_logger.log_assignments([assignment])
-            return assignment
-
-        # Get the experiment and determine variant
-        experiment = session.get(Experiment, slot.experiment_id)
-        if not experiment or not experiment.is_active(utc_now()):
-            assignment = {
-                "unit_id": str(unit_id),
-                "layer_id": layer.layer_id,
-                "slot_index": slot_index,
-                "experiment_id": slot.experiment_id,
-                "variant": None,
-                "status": "experiment_inactive",
-            }
-            AssignmentService._assignment_logger.log_assignments([assignment])
-            return assignment
-
-        # Use splitter to determine variant within the experiment
-        splitter = HashBasedSplitter(experiment_id=experiment.experiment_id)
-        variant = splitter.assign_variant(
-            unit_id, experiment.get_variant_list(), list(experiment.get_traffic_dict().values())
-        )
-
-        assignment = {
-            "unit_id": str(unit_id),
-            "layer_id": layer.layer_id,
-            "slot_index": slot_index,
-            "experiment_id": experiment.experiment_id,
-            "experiment_name": experiment.name,
-            "variant": variant,
-            "status": "assigned",
-        }
-        AssignmentService._assignment_logger.log_assignments([assignment])
-        return assignment
-
-    @staticmethod
-    def get_user_assignments_bulk(
-        session: Session, layer: Layer, unit_ids: list[str | int]
-    ) -> Dict[str | int, Dict[str, Any]]:
-        assignments = {}
-        batch = []
-        for unit_id in unit_ids:
-            assignment = AssignmentService.get_user_assignment(session, layer, unit_id)
-            assignments[unit_id] = assignment
-            batch.append(assignment)
-
-            # For very large batches, flush periodically (e.g., every 1000)
-            if len(batch) >= 1000:
-                AssignmentService._assignment_logger.log_assignments(batch)
-                batch = []
-
-        # Flush any remaining assignments
-        if batch:
-            AssignmentService._assignment_logger.log_assignments(batch)
-
-        return assignments
-
-    @staticmethod
-    def _calculate_user_slot(layer_salt: str, total_slots: int, user_id: str | int) -> int:
-        """Calculate which slot a user belongs to using consistent hashing."""
-        hash_input = f"{user_id}{layer_salt}".encode("utf-8")
-        digest = hashlib.md5(hash_input).hexdigest()
-        hash_value = int(digest, 16)
-        return hash_value % total_slots
-
-    @staticmethod
-    def preview_assignment_distribution(
-        session: Session, layer: Layer, sample_user_ids: list[str | int]
-    ) -> Dict[str, Any]:
-        """Preview how users would be distributed across experiments."""
-        distribution: Dict[str, int] = {}
-        unassigned_count = 0
-
-        for user_id in sample_user_ids:
-            assignment = AssignmentService.get_user_assignment(session, layer, user_id)
-
-            if assignment["status"] == "assigned":
-                exp_id = assignment["experiment_id"]
-                variant = assignment["variant"]
-                key = f"{exp_id}:{variant}"
-                distribution[key] = distribution.get(key, 0) + 1
-            else:
-                unassigned_count += 1
-
-        return {
-            "total_users": len(sample_user_ids),
-            "assignment_distribution": distribution,
-            "unassigned_count": unassigned_count,
-            "assignment_rate": (len(sample_user_ids) - unassigned_count) / len(sample_user_ids) * 100,
-        }
+        for variant, boundary in buckets:
+            if val < boundary:
+                return variant
+        return variants[-1]  # Fallback if rounding edge-case
