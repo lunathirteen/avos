@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from avos.models.base import Base
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
-from avos.services.splitter import AssignmentService
+from avos.services.assignment_service import AssignmentService
 from avos.utils.datetime_utils import utc_now
 
 def main():
@@ -46,7 +46,7 @@ def main():
         layer_id="homepage_hero",
         name="Hero Button Color Test",
         variants=["blue", "green", "red"],
-        traffic_allocation={"blue": 33.33, "green": 33.33, "red": 33.34},
+        traffic_allocation={"blue": 0.33, "green": 0.33, "red": 0.34},
         traffic_percentage=60.0,
         start_date=utc_now() - timedelta(hours=1),
         end_date=utc_now() + timedelta(days=14),
@@ -63,7 +63,7 @@ def main():
         layer_id="checkout_flow",
         name="Payment Methods Test",
         variants=["credit_first", "paypal_first"],
-        traffic_allocation={"credit_first": 50.0, "paypal_first": 50.0},
+        traffic_allocation={"credit_first": 0.5, "paypal_first": 0.5},
         traffic_percentage=75.0,
         start_date=utc_now() - timedelta(hours=2),
         end_date=utc_now() + timedelta(days=10),
@@ -77,7 +77,7 @@ def main():
     # Step 3: Single user assignment
     print("\n👤 Single user assignment demo...")
 
-    user_assignment = AssignmentService.get_user_assignment(
+    user_assignment = AssignmentService.assign_for_layer(
         session, homepage_layer, "user_12345"
     )
     print(f"User assignment: {user_assignment}")
@@ -86,7 +86,7 @@ def main():
     print("\n👥 Bulk user assignment demo...")
 
     user_ids = [f"user_{i:06d}" for i in range(1000)]
-    bulk_assignments = AssignmentService.get_user_assignments_bulk(
+    bulk_assignments = AssignmentService.assign_bulk_for_layer(
         session, homepage_layer, user_ids
     )
 
