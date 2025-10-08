@@ -6,7 +6,8 @@ from sqlalchemy.orm import sessionmaker
 from avos.models.base import Base
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
-from avos.services.splitter import AssignmentService
+from avos.services.assignment_service import AssignmentService
+from avos.services.assignment_logger import MotherDuckAssignmentLogger
 from avos.utils.datetime_utils import utc_now
 
 def main():
@@ -46,7 +47,7 @@ def main():
         layer_id="homepage_hero",
         name="Hero Button Color Test",
         variants=["blue", "green", "red"],
-        traffic_allocation={"blue": 33.33, "green": 33.33, "red": 33.34},
+        traffic_allocation={"blue": 0.33, "green": 0.33, "red": 0.34},
         traffic_percentage=60.0,
         start_date=utc_now() - timedelta(hours=1),
         end_date=utc_now() + timedelta(days=14),
@@ -63,7 +64,7 @@ def main():
         layer_id="checkout_flow",
         name="Payment Methods Test",
         variants=["credit_first", "paypal_first"],
-        traffic_allocation={"credit_first": 50.0, "paypal_first": 50.0},
+        traffic_allocation={"credit_first": 0.5, "paypal_first": 0.5},
         traffic_percentage=75.0,
         start_date=utc_now() - timedelta(hours=2),
         end_date=utc_now() + timedelta(days=10),
@@ -75,20 +76,25 @@ def main():
     print(f"✅ Payment experiment added: {success}")
 
     # Step 3: Single user assignment
+    assignment_logger = MotherDuckAssignmentLogger()
+
     print("\n👤 Single user assignment demo...")
 
-    user_assignment = AssignmentService.get_user_assignment(
+    user_assignment = AssignmentService.assign_for_layer(
         session, homepage_layer, "user_12345"
     )
+    assignment_logger.log_assignments([user_assignment])
+
     print(f"User assignment: {user_assignment}")
 
     # Step 4: Bulk user assignments
     print("\n👥 Bulk user assignment demo...")
 
     user_ids = [f"user_{i:06d}" for i in range(1000)]
-    bulk_assignments = AssignmentService.get_user_assignments_bulk(
+    bulk_assignments = AssignmentService.assign_bulk_for_layer(
         session, homepage_layer, user_ids
     )
+    assignment_logger.log_assignments(list(bulk_assignments.values()))
 
     print(f"Processed {len(bulk_assignments)} user assignments")
 
@@ -103,10 +109,9 @@ def main():
     # Step 6: Query DuckDB assignment logs
     print("\n🗄️ Querying assignment logs from DuckDB...")
 
-    logger = AssignmentService._assignment_logger
 
     # Query variant counts for an experiment
-    variant_counts = logger.con.execute("""
+    variant_counts = assignment_logger.con.execute("""
         SELECT experiment_id, variant, COUNT(*) as count
         FROM user_assignments
         WHERE experiment_id = 'hero_button_colors'
@@ -120,7 +125,7 @@ def main():
         print(f"  {row[0]} - {row[1]}: {row[2]} users")
 
     # Query assignment status breakdown
-    status_breakdown = logger.con.execute("""
+    status_breakdown = assignment_logger.con.execute("""
         SELECT status, COUNT(*) as count
         FROM user_assignments
         GROUP BY status
@@ -131,7 +136,7 @@ def main():
         print(f"  {row[0]}: {row[1]} assignments")
 
     # Query recent assignments
-    recent_assignments = logger.con.execute("""
+    recent_assignments = assignment_logger.con.execute("""
         SELECT unit_id, experiment_id, variant, assignment_timestamp
         FROM user_assignments
         WHERE status = 'assigned'
@@ -155,7 +160,7 @@ def main():
 
     # Step 8: Cleanup
     print("\n🧹 Cleaning up...")
-    AssignmentService._assignment_logger.close()
+    assignment_logger.close()
     session.close()
 
     print("Demo completed successfully! 🎉")
