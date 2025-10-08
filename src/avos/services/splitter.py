@@ -115,3 +115,62 @@ class SegmentedSplitter(BaseSplitter):
             if val < upper:
                 return v
         return seg_variants[-1]
+
+
+class StratifiedSplitter(BaseSplitter):
+    """
+    Stratified splitter—guarantees ratio within each stratum.
+    stratum_allocations: {stratum: ([variants], [allocations])}
+    """
+    def __init__(self, experiment_id: str, stratum_allocations: dict):
+        self.exp_id = experiment_id
+        self.stratum_allocations = stratum_allocations
+
+    def assign_variant(self, unit_id, variants, allocations, stratum=None):
+        if stratum is None or stratum not in self.stratum_allocations:
+            raise ValueError("Stratum required for stratified split!")
+        stratum_variants, stratum_allocs = self.stratum_allocations[stratum]
+        if len(stratum_variants) != len(stratum_allocs):
+            raise ValueError("Stratum allocation misconfigured")
+        # Deterministic hash (add stratum to salt)
+        base_string = f"{unit_id}{self.exp_id}{stratum}"
+        import hashlib
+        digest = hashlib.md5(base_string.encode()).hexdigest()
+        val = int(digest, 16) / 2**128
+        buckets, cumulative = [], 0.0
+        for v, a in zip(stratum_variants, stratum_allocs):
+            cumulative += a
+            buckets.append((v, cumulative))
+        for v, upper in buckets:
+            if val < upper:
+                return v
+        return stratum_variants[-1]
+
+
+class GeoBasedSplitter(BaseSplitter):
+    """
+    Geo-based deterministic assignment (by country/region).
+    geo_allocations: {geo: ([variants], [allocations])}
+    """
+    def __init__(self, experiment_id: str, geo_allocations: dict):
+        self.exp_id = experiment_id
+        self.geo_allocations = geo_allocations
+
+    def assign_variant(self, unit_id, variants, allocations, geo=None):
+        if geo is None or geo not in self.geo_allocations:
+            raise ValueError("Geo required for geo-based split!")
+        geo_variants, geo_allocs = self.geo_allocations[geo]
+        if len(geo_variants) != len(geo_allocs):
+            raise ValueError("Geo allocation misconfigured")
+        base_string = f"{unit_id}{self.exp_id}{geo}"
+        import hashlib
+        digest = hashlib.md5(base_string.encode()).hexdigest()
+        val = int(digest, 16) / 2**128
+        buckets, cumulative = [], 0.0
+        for v, a in zip(geo_variants, geo_allocs):
+            cumulative += a
+            buckets.append((v, cumulative))
+        for v, upper in buckets:
+            if val < upper:
+                return v
+        return geo_variants[-1]

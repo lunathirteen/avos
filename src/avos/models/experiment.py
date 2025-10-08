@@ -33,8 +33,13 @@ class Experiment(Base):
     # Optional fields
     start_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    segment_allocations: Mapped[str | None] = mapped_column(String, nullable=True)
+    geo_allocations: Mapped[str | None] = mapped_column(String, nullable=True)
+    stratum_allocations: Mapped[str | None] = mapped_column(String, nullable=True)
+
 
     # Fields with defaults
+    splitter_type: Mapped[str] = mapped_column(String, default="hash")  # e.g. "hash", "geo", "stratified"
     traffic_percentage: Mapped[float] = mapped_column(Float, default=100.0)
     status: Mapped[ExperimentStatus] = mapped_column(SQLEnum(ExperimentStatus), default=ExperimentStatus.DRAFT)
     priority: Mapped[int] = mapped_column(Integer, default=0)
@@ -74,6 +79,15 @@ class Experiment(Base):
 
     def get_traffic_dict(self) -> Dict[str, float]:
         return json.loads(self.traffic_allocation)
+
+    def get_segment_allocations(self) -> dict:
+        return json.loads(self.segment_allocations) if self.segment_allocations else {}
+
+    def get_geo_allocations(self) -> dict:
+        return json.loads(self.geo_allocations) if self.geo_allocations else {}
+
+    def get_stratum_allocations(self) -> dict:
+        return json.loads(self.stratum_allocations) if self.stratum_allocations else {}
 
     def is_active(self, now: datetime | None = None) -> bool:
         """Check if experiment is active at the given time (UTC)."""
