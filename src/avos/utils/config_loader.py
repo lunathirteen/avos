@@ -1,5 +1,5 @@
 import yaml
-from avos.models.config_models import LayerConfig
+from avos.models.config_models import LayerConfig, ExperimentConfig
 
 def load_layer_config(path):
     with open(path) as f:
