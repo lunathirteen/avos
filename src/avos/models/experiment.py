@@ -37,7 +37,6 @@ class Experiment(Base):
     geo_allocations: Mapped[str | None] = mapped_column(String, nullable=True)
     stratum_allocations: Mapped[str | None] = mapped_column(String, nullable=True)
 
-
     # Fields with defaults
     splitter_type: Mapped[str] = mapped_column(String, default="hash")  # e.g. "hash", "geo", "stratified"
     traffic_percentage: Mapped[float] = mapped_column(Float, default=100.0)
