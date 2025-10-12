@@ -5,6 +5,7 @@ from avos.services.splitter import HashBasedSplitter
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment
 
+
 def make_layer(layer_id="layer1", salt="abc", slots=5):
     layer = MagicMock(spec=Layer)
     layer.layer_id = layer_id
@@ -12,12 +13,14 @@ def make_layer(layer_id="layer1", salt="abc", slots=5):
     layer.total_slots = slots
     return layer
 
+
 def make_slot(layer_id, index, exp_id=None):
     slot = MagicMock(spec=LayerSlot)
     slot.layer_id = layer_id
     slot.slot_index = index
     slot.experiment_id = exp_id
     return slot
+
 
 def make_experiment(exp_id="exp1", variants=["A", "B"], allocations=[0.5, 0.5], splitter="hash"):
     exp = MagicMock(spec=Experiment)
@@ -29,6 +32,7 @@ def make_experiment(exp_id="exp1", variants=["A", "B"], allocations=[0.5, 0.5], 
     exp.get_stratum_allocations.return_value = {}
     exp.get_geo_allocations.return_value = {}
     return exp
+
 
 def test_assignment_for_assigned_slot(monkeypatch):
     """Assigned slot with active experiment returns correct assignment."""
@@ -46,6 +50,7 @@ def test_assignment_for_assigned_slot(monkeypatch):
     assert assignment["variant"] in ["A", "B"]
     assert assignment["status"] == "assigned"
 
+
 def test_assignment_for_unassigned_slot():
     """Unassigned slot returns 'not_assigned' and None experiment."""
     layer = make_layer()
@@ -57,6 +62,7 @@ def test_assignment_for_unassigned_slot():
     assert assignment["experiment_id"] is None
     assert assignment["variant"] is None
     assert assignment["status"] == "not_assigned"
+
 
 def test_assignment_for_inactive_experiment():
     """Inactive experiment returns 'experiment_inactive'."""
@@ -74,12 +80,14 @@ def test_assignment_for_inactive_experiment():
     assert assignment["variant"] is None
     assert assignment["status"] == "experiment_inactive"
 
+
 def test_assignment_slot_hash_consistency():
     """User gets consistent slot for same layer and salt."""
     layer = make_layer(salt="testhash", slots=10)
     idx1 = AssignmentService._calculate_user_slot("testhash", 10, "user1")
     idx2 = AssignmentService._calculate_user_slot("testhash", 10, "user1")
     assert idx1 == idx2
+
 
 def test_bulk_assignment(monkeypatch):
     layer = make_layer()
@@ -95,6 +103,7 @@ def test_bulk_assignment(monkeypatch):
         assert assign["experiment_id"] == "exp1"
         assert assign["status"] == "assigned"
 
+
 def test_preview_assignment_distribution(monkeypatch):
     layer = make_layer()
     slot = make_slot(layer.layer_id, 0, "exp1")
@@ -109,4 +118,3 @@ def test_preview_assignment_distribution(monkeypatch):
     assert "assignment_distribution" in preview
     assert preview["unassigned_count"] == 0
     assert preview["assignment_rate"] == 100.0
-

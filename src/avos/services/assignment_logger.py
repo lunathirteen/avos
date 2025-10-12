@@ -3,16 +3,17 @@ from datetime import datetime
 from typing import List, Dict, Any
 import os  # For environment variable handling
 
+
 class MotherDuckAssignmentLogger:
     def __init__(self, db_name: str = "avos_db", token: str = None):
         # Set up authentication (use env var for security in production)
         if token is None:
-            token = os.getenv('MOTHERDUCK_TOKEN')
+            token = os.getenv("MOTHERDUCK_TOKEN")
         if not token:
             raise ValueError("MotherDuck token required. Set via env var or constructor.")
 
         # Connect to MotherDuck (equivalent to 'duckdb:///md:avos_db')
-        self.con = duckdb.connect(f'md:{db_name}?motherduck_token={token}')
+        self.con = duckdb.connect(f"md:{db_name}?motherduck_token={token}")
 
         # Initialize table (TIMESTAMP handles datetime objects directly)
         self._initialize_table()

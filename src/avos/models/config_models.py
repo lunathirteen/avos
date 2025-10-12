@@ -4,9 +4,11 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import List, Dict, Optional, Literal
 
+
 class LayerSlotConfig(BaseModel):
     slot_index: int
     experiment_id: Optional[str] = None
+
 
 class ExperimentConfig(BaseModel):
     experiment_id: str
@@ -14,7 +16,7 @@ class ExperimentConfig(BaseModel):
     name: str
     variants: List[str]
     traffic_allocation: Dict[str, float]
-    status: Literal['draft', 'active', 'paused', 'completed'] = 'draft'
+    status: Literal["draft", "active", "paused", "completed"] = "draft"
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     segment_allocations: Optional[Dict[str, float]] = None
@@ -23,6 +25,7 @@ class ExperimentConfig(BaseModel):
     splitter_type: Optional[str] = "hash"
     traffic_percentage: float = 100.0
     priority: int = 0
+
 
 class LayerConfig(BaseModel):
     layer_id: str

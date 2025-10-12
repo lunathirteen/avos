@@ -8,6 +8,7 @@ from avos.models.experiment import Experiment
 from avos.services.splitter import HashBasedSplitter, RandomSplitter, StratifiedSplitter, GeoBasedSplitter
 from avos.utils.datetime_utils import utc_now
 
+
 class AssignmentService:
     """Layer/slot AB assignment logic, with preview and bulk assignment, extensible splitter support."""
 
@@ -16,57 +17,56 @@ class AssignmentService:
         session: Session,
         layer: Layer,
         unit_id: str | int,
-        segment: Optional[str]=None,
-        geo: Optional[str]=None,
-        stratum: Optional[str]=None
+        segment: Optional[str] = None,
+        geo: Optional[str] = None,
+        stratum: Optional[str] = None,
     ) -> Dict[str, Any]:
         slot_index = AssignmentService._calculate_user_slot(layer.layer_salt, layer.total_slots, unit_id)
         slot = session.execute(
-            select(LayerSlot).where(
-                LayerSlot.layer_id == layer.layer_id,
-                LayerSlot.slot_index == slot_index
-            )
+            select(LayerSlot).where(LayerSlot.layer_id == layer.layer_id, LayerSlot.slot_index == slot_index)
         ).scalar_one_or_none()
         if not slot or not slot.experiment_id:
             return AssignmentService._make_assignment(unit_id, layer, slot_index, None, None, "not_assigned")
 
         experiment = session.get(Experiment, slot.experiment_id)
         if not experiment or not experiment.is_active(utc_now()):
-            return AssignmentService._make_assignment(unit_id, layer, slot_index, slot.experiment_id, None, "experiment_inactive")
+            return AssignmentService._make_assignment(
+                unit_id, layer, slot_index, slot.experiment_id, None, "experiment_inactive"
+            )
 
         splitter = AssignmentService._select_splitter(
-            experiment.splitter_type or "hash",
-            experiment,
-            segment,
-            geo,
-            stratum
+            experiment.splitter_type or "hash", experiment, segment, geo, stratum
         )
         splitter_kwargs = {}
-        if segment: splitter_kwargs['segment'] = segment
-        if geo: splitter_kwargs['geo'] = geo
-        if stratum: splitter_kwargs['stratum'] = stratum
+        if segment:
+            splitter_kwargs["segment"] = segment
+        if geo:
+            splitter_kwargs["geo"] = geo
+        if stratum:
+            splitter_kwargs["stratum"] = stratum
 
         variant = splitter.assign_variant(
-            unit_id,
-            experiment.get_variant_list(),
-            list(experiment.get_traffic_dict().values()),
-            **splitter_kwargs
+            unit_id, experiment.get_variant_list(), list(experiment.get_traffic_dict().values()), **splitter_kwargs
         )
-        return AssignmentService._make_assignment(unit_id, layer, slot_index, experiment.experiment_id, variant, "assigned")
+        return AssignmentService._make_assignment(
+            unit_id, layer, slot_index, experiment.experiment_id, variant, "assigned"
+        )
 
     @staticmethod
     def assign_bulk_for_layer(
         session: Session,
         layer: Layer,
         unit_ids: List[str | int],
-        segment: Optional[str]=None,
-        geo: Optional[str]=None,
-        stratum: Optional[str]=None
+        segment: Optional[str] = None,
+        geo: Optional[str] = None,
+        stratum: Optional[str] = None,
     ) -> Dict[str | int, Dict[str, Any]]:
         """Bulk-assign for many users."""
         assignments = {}
         for uid in unit_ids:
-            assignment = AssignmentService.assign_for_layer(session, layer, uid, segment=segment, geo=geo, stratum=stratum)
+            assignment = AssignmentService.assign_for_layer(
+                session, layer, uid, segment=segment, geo=geo, stratum=stratum
+            )
             assignments[uid] = assignment
         return assignments
 
@@ -75,15 +75,17 @@ class AssignmentService:
         session: Session,
         layer: Layer,
         sample_unit_ids: List[str | int],
-        segment: Optional[str]=None,
-        geo: Optional[str]=None,
-        stratum: Optional[str]=None
+        segment: Optional[str] = None,
+        geo: Optional[str] = None,
+        stratum: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Preview experiment/variant distribution for SRM monitoring and slot QA."""
         distribution = {}
         unassigned_count = 0
         for uid in sample_unit_ids:
-            assignment = AssignmentService.assign_for_layer(session, layer, uid, segment=segment, geo=geo, stratum=stratum)
+            assignment = AssignmentService.assign_for_layer(
+                session, layer, uid, segment=segment, geo=geo, stratum=stratum
+            )
             if assignment["status"] == "assigned":
                 key = f"{assignment['experiment_id']}:{assignment['variant']}"
                 distribution[key] = distribution.get(key, 0) + 1
