@@ -6,7 +6,7 @@ def load_layer_config(path):
         data = yaml.safe_load(f)
     return LayerConfig(**data)
 
-def load_experiment_configs(path):
+def load_experiment_config(path):
     with open(path) as f:
         data = yaml.safe_load(f)
-    return [ExperimentConfig(**exp) for exp in data['experiments']]
+    return ExperimentConfig(**data)
