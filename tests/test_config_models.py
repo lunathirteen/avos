@@ -1,5 +1,5 @@
 import pytest
-from avos.models.config_models import LayerConfig, ExperimentConfig, LayerSlotConfig
+from avos.models.config_models import LayerConfig, ExperimentConfig
 
 
 def test_experiment_config_valid():
