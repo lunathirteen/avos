@@ -1,4 +1,3 @@
-from avos.constants import BUCKET_SPACE
 from avos.utils.config_loader import load_experiment_config, load_layer_config, load_layer_configs_from_dir
 
 

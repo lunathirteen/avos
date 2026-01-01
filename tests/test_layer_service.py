@@ -154,6 +154,28 @@ class TestExperimentCRUD:
         ).scalar()
         assert allocated_slots == math.ceil(sample_experiment_data["traffic_percentage"] * BUCKET_SPACE)
 
+    def test_add_experiment_with_reserved_percentage(self, db_session, sample_experiment_data):
+        layer = LayerService.create_layer(db_session, "test_layer", "salt")
+        sample_experiment_data["traffic_percentage"] = 0.3
+        sample_experiment_data["reserved_percentage"] = 0.6
+        experiment = Experiment(**sample_experiment_data)
+
+        success = LayerService.add_experiment(db_session, layer, experiment)
+        assert success is True
+
+        active_slots = db_session.execute(
+            select(func.count())
+            .select_from(LayerSlot)
+            .where(LayerSlot.layer_id == "test_layer", LayerSlot.experiment_id == "test_exp_001")
+        ).scalar()
+        reserved_slots = db_session.execute(
+            select(func.count())
+            .select_from(LayerSlot)
+            .where(LayerSlot.layer_id == "test_layer", LayerSlot.reserved_experiment_id == "test_exp_001")
+        ).scalar()
+        assert active_slots == math.ceil(0.3 * BUCKET_SPACE)
+        assert reserved_slots == math.ceil(0.6 * BUCKET_SPACE)
+
     def test_add_experiment_layer_id_mismatch(self, db_session, sample_experiment_data):
         """Test adding experiment with mismatched layer_id raises error."""
         layer = LayerService.create_layer(db_session, "layer_a", "salt")
@@ -198,6 +220,7 @@ class TestExperimentCRUD:
         )
         for slot in slots:
             slot.experiment_id = "existing_exp"
+            slot.reserved_experiment_id = "existing_exp"
         db_session.commit()
 
         # Try to add experiment requiring more slots than remain - should fail

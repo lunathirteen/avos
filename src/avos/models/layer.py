@@ -40,6 +40,9 @@ class LayerSlot(Base):
     layer_id: Mapped[str] = mapped_column(String, ForeignKey("layers.layer_id"), primary_key=True)
     slot_index: Mapped[int] = mapped_column(Integer, primary_key=True)
     experiment_id: Mapped[str | None] = mapped_column(String, ForeignKey("experiments.experiment_id"))
+    reserved_experiment_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("experiments.experiment_id"), nullable=True, default=None
+    )
 
     layer: Mapped["Layer"] = relationship(
         "Layer",
@@ -50,6 +53,7 @@ class LayerSlot(Base):
     )
     experiment: Mapped["Experiment"] = relationship(
         "Experiment",
+        foreign_keys=[experiment_id],
         init=False,
         repr=False,
     )

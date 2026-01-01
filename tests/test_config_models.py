@@ -63,6 +63,31 @@ def test_layer_config_custom_total_slots_rejected():
         LayerConfig(layer_id="l3", layer_salt="salt", total_slots=10)
 
 
+def test_experiment_reserved_defaults_to_traffic():
+    exp = ExperimentConfig(
+        experiment_id="exp_reserved_default",
+        layer_id="layer1",
+        name="Reserved Default",
+        variants=["A", "B"],
+        traffic_allocation={"A": 0.5, "B": 0.5},
+        traffic_percentage=0.4,
+    )
+    assert exp.reserved_percentage == 0.4
+
+
+def test_experiment_reserved_below_traffic_rejected():
+    with pytest.raises(Exception):
+        ExperimentConfig(
+            experiment_id="exp_reserved_low",
+            layer_id="layer1",
+            name="Reserved Low",
+            variants=["A", "B"],
+            traffic_allocation={"A": 0.5, "B": 0.5},
+            traffic_percentage=0.5,
+            reserved_percentage=0.4,
+        )
+
+
 def test_experiment_invalid_status():
     with pytest.raises(Exception):
         ExperimentConfig(

@@ -92,7 +92,9 @@ def _apply_experiment_config(session: Session, layer, experiment_config: Experim
     if existing.status == ExperimentStatus.COMPLETED:
         raise ValueError(f"experiment {experiment_config.experiment_id} is completed and cannot be modified")
     _validate_experiment_immutables(existing, experiment_config)
-    _validate_traffic_percentage_change(session, layer, existing, experiment_config)
+    _validate_traffic_percentage_change(existing, experiment_config)
+    _validate_reserved_percentage_change(session, layer, existing, experiment_config)
+    _apply_reservation_slots(session, layer, existing, experiment_config)
     _apply_ramp_up_slots(session, layer, existing, experiment_config)
     _update_experiment(existing, experiment_config)
     session.commit()
@@ -113,6 +115,7 @@ def _build_experiment(experiment_config: ExperimentConfig) -> Experiment:
         stratum_allocations=experiment_config.stratum_allocations,
         splitter_type=experiment_config.splitter_type,
         traffic_percentage=experiment_config.traffic_percentage,
+        reserved_percentage=experiment_config.reserved_percentage,
         priority=experiment_config.priority,
     )
 
@@ -161,6 +164,7 @@ def _update_experiment(existing: Experiment, experiment_config: ExperimentConfig
     existing.geo_allocations = _dump_optional(experiment_config.geo_allocations)
     existing.stratum_allocations = _dump_optional(experiment_config.stratum_allocations)
     existing.traffic_percentage = experiment_config.traffic_percentage
+    existing.reserved_percentage = experiment_config.reserved_percentage
     existing.priority = experiment_config.priority
 
 
@@ -172,16 +176,22 @@ def _normalize_allocations_optional(value):
     return value or {}
 
 
-def _validate_traffic_percentage_change(session: Session, layer, existing: Experiment, experiment_config: ExperimentConfig):
-    if experiment_config.traffic_percentage < existing.traffic_percentage - 1e-9:
+def _validate_reserved_percentage_change(
+    session: Session, layer, existing: Experiment, experiment_config: ExperimentConfig
+):
+    if experiment_config.reserved_percentage < existing.reserved_percentage - 1e-9:
         raise ValueError(
-            f"experiment {experiment_config.experiment_id} traffic_percentage cannot decrease; "
+            f"experiment {experiment_config.experiment_id} reserved_percentage cannot decrease; "
             "create a new experiment"
+        )
+    if experiment_config.reserved_percentage + 1e-9 < experiment_config.traffic_percentage:
+        raise ValueError(
+            f"experiment {experiment_config.experiment_id} reserved_percentage must be >= traffic_percentage"
         )
 
     total_other = (
         session.execute(
-            select(func.sum(Experiment.traffic_percentage)).where(
+            select(func.sum(Experiment.reserved_percentage)).where(
                 Experiment.layer_id == layer.layer_id,
                 Experiment.experiment_id != existing.experiment_id,
                 Experiment.status != ExperimentStatus.COMPLETED,
@@ -189,10 +199,62 @@ def _validate_traffic_percentage_change(session: Session, layer, existing: Exper
         ).scalar()
         or 0.0
     )
-    if total_other + experiment_config.traffic_percentage > layer.total_traffic_percentage + 1e-9:
+    if total_other + experiment_config.reserved_percentage > layer.total_traffic_percentage + 1e-9:
         raise ValueError(
-            f"experiment {experiment_config.experiment_id} traffic_percentage exceeds layer capacity"
+            f"experiment {experiment_config.experiment_id} reserved_percentage exceeds layer capacity"
         )
+
+
+def _validate_traffic_percentage_change(existing: Experiment, experiment_config: ExperimentConfig):
+    if experiment_config.traffic_percentage < existing.traffic_percentage - 1e-9:
+        raise ValueError(
+            f"experiment {experiment_config.experiment_id} traffic_percentage cannot decrease; "
+            "create a new experiment"
+        )
+    if experiment_config.traffic_percentage > experiment_config.reserved_percentage + 1e-9:
+        raise ValueError(
+            f"experiment {experiment_config.experiment_id} traffic_percentage cannot exceed reserved_percentage"
+        )
+
+
+def _apply_reservation_slots(session: Session, layer, existing: Experiment, experiment_config: ExperimentConfig):
+    desired_slots = math.ceil(experiment_config.reserved_percentage * layer.total_slots)
+    current_slots = (
+        session.execute(
+            select(func.count())
+            .select_from(LayerSlot)
+            .where(
+                LayerSlot.layer_id == layer.layer_id,
+                LayerSlot.reserved_experiment_id == existing.experiment_id,
+            )
+        ).scalar()
+        or 0
+    )
+    if desired_slots < current_slots:
+        raise ValueError(
+            f"experiment {experiment_config.experiment_id} reserved_percentage cannot decrease; "
+            "create a new experiment"
+        )
+    additional_slots = desired_slots - current_slots
+    if additional_slots <= 0:
+        return
+
+    free_slots = (
+        session.execute(
+            select(LayerSlot)
+            .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.reserved_experiment_id.is_(None))
+            .order_by(LayerSlot.slot_index)
+            .limit(additional_slots)
+        )
+        .scalars()
+        .all()
+    )
+    if len(free_slots) < additional_slots:
+        raise ValueError(
+            f"experiment {experiment_config.experiment_id} has insufficient free slots for reservation"
+        )
+    for slot in free_slots:
+        slot.reserved_experiment_id = existing.experiment_id
 
 
 def _apply_ramp_up_slots(session: Session, layer, existing: Experiment, experiment_config: ExperimentConfig):
@@ -214,20 +276,25 @@ def _apply_ramp_up_slots(session: Session, layer, existing: Experiment, experime
     if additional_slots <= 0:
         return
 
-    free_slots = (
+    free_reserved_slots = (
         session.execute(
             select(LayerSlot)
-            .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id.is_(None))
+            .where(
+                LayerSlot.layer_id == layer.layer_id,
+                LayerSlot.reserved_experiment_id == existing.experiment_id,
+                LayerSlot.experiment_id.is_(None),
+            )
+            .order_by(LayerSlot.slot_index)
             .limit(additional_slots)
         )
         .scalars()
         .all()
     )
-    if len(free_slots) < additional_slots:
+    if len(free_reserved_slots) < additional_slots:
         raise ValueError(
-            f"experiment {experiment_config.experiment_id} has insufficient free slots for ramp up"
+            f"experiment {experiment_config.experiment_id} has insufficient reserved slots for ramp up"
         )
-    for slot in free_slots:
+    for slot in free_reserved_slots:
         slot.experiment_id = existing.experiment_id
 
 

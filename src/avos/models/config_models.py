@@ -66,6 +66,7 @@ class ExperimentConfig(BaseModel):
     stratum_allocations: Optional[Dict[str, Dict[str, float]]] = None
     splitter_type: Optional[str] = "hash"
     traffic_percentage: float = 1.0
+    reserved_percentage: Optional[float] = None
     priority: int = 0
 
     @model_validator(mode="after")
@@ -76,8 +77,15 @@ class ExperimentConfig(BaseModel):
         _validate_segmented_allocations(self.variants, self.geo_allocations, "geo_allocations")
         _validate_segmented_allocations(self.variants, self.stratum_allocations, "stratum_allocations")
 
+        if self.reserved_percentage is None:
+            self.reserved_percentage = self.traffic_percentage
+
         if self.traffic_percentage < 0 or self.traffic_percentage > 1:
             raise ValueError("traffic_percentage must be between 0 and 1")
+        if self.reserved_percentage < 0 or self.reserved_percentage > 1:
+            raise ValueError("reserved_percentage must be between 0 and 1")
+        if self.reserved_percentage + _ALLOC_TOLERANCE < self.traffic_percentage:
+            raise ValueError("reserved_percentage must be >= traffic_percentage")
         if self.splitter_type is not None and self.splitter_type not in _ALLOWED_SPLITTER_TYPES:
             raise ValueError(f"splitter_type must be one of {sorted(_ALLOWED_SPLITTER_TYPES)}")
 
