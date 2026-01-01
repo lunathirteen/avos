@@ -18,10 +18,12 @@ Use `uv` to run examples/tests:
 
 ```bash
 uv run python examples/service_workflow.py
+uv run python examples/synthetic_split_check.py
 uv run pytest tests/
 ```
 
 The example workflow reads YAML configs, applies them to a SQLite DB, and prints layer utilization and assignments.
+The synthetic split check runs a deterministic distribution/ramp-up sanity check.
 
 ## YAML Config Workflow
 
