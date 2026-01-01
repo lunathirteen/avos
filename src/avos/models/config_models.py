@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
 from typing import List, Dict, Optional, Literal
 
+from avos.constants import BUCKET_SPACE
 
 _ALLOC_TOLERANCE = 1e-6
 _ALLOWED_SPLITTER_TYPES = {"hash", "random", "stratified", "geo", "segment"}
@@ -65,6 +66,7 @@ class ExperimentConfig(BaseModel):
     stratum_allocations: Optional[Dict[str, Dict[str, float]]] = None
     splitter_type: Optional[str] = "hash"
     traffic_percentage: float = 1.0
+    reserved_percentage: Optional[float] = None
     priority: int = 0
 
     @model_validator(mode="after")
@@ -75,8 +77,15 @@ class ExperimentConfig(BaseModel):
         _validate_segmented_allocations(self.variants, self.geo_allocations, "geo_allocations")
         _validate_segmented_allocations(self.variants, self.stratum_allocations, "stratum_allocations")
 
+        if self.reserved_percentage is None:
+            self.reserved_percentage = self.traffic_percentage
+
         if self.traffic_percentage < 0 or self.traffic_percentage > 1:
             raise ValueError("traffic_percentage must be between 0 and 1")
+        if self.reserved_percentage < 0 or self.reserved_percentage > 1:
+            raise ValueError("reserved_percentage must be between 0 and 1")
+        if self.reserved_percentage + _ALLOC_TOLERANCE < self.traffic_percentage:
+            raise ValueError("reserved_percentage must be >= traffic_percentage")
         if self.splitter_type is not None and self.splitter_type not in _ALLOWED_SPLITTER_TYPES:
             raise ValueError(f"splitter_type must be one of {sorted(_ALLOWED_SPLITTER_TYPES)}")
 
@@ -96,15 +105,15 @@ class ExperimentConfig(BaseModel):
 class LayerConfig(BaseModel):
     layer_id: str
     layer_salt: str
-    total_slots: int = 100
+    total_slots: int = BUCKET_SPACE
     total_traffic_percentage: float = 1.0
     experiments: List[ExperimentConfig] = Field(default_factory=list)
     slots: Optional[List[LayerSlotConfig]] = None
 
     @model_validator(mode="after")
     def validate_layer(self):
-        if self.total_slots <= 0:
-            raise ValueError("total_slots must be positive")
+        if self.total_slots != BUCKET_SPACE:
+            raise ValueError(f"total_slots must be {BUCKET_SPACE} for fixed bucket space")
         if self.total_traffic_percentage <= 0 or self.total_traffic_percentage > 1:
             raise ValueError("total_traffic_percentage must be between 0 and 1")
         if self.slots:

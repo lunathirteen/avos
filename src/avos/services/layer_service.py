@@ -4,6 +4,7 @@ import math
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 
+from avos.constants import BUCKET_SPACE
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
 
@@ -17,10 +18,13 @@ class LayerService:
         session: Session,
         layer_id: str,
         layer_salt: str,
-        total_slots: int = 100,
+        total_slots: int = BUCKET_SPACE,
         total_traffic_percentage: float = 1.0,
     ) -> Layer:
         """Create a new layer with pre-allocated empty slots."""
+        if total_slots != BUCKET_SPACE:
+            raise ValueError(f"total_slots must be {BUCKET_SPACE} for fixed bucket space")
+
         layer = Layer(
             layer_id=layer_id,
             layer_salt=layer_salt,
@@ -31,7 +35,14 @@ class LayerService:
 
         # Pre-create empty slots
         for i in range(total_slots):
-            session.add(LayerSlot(layer_id=layer_id, slot_index=i, experiment_id=None))
+            session.add(
+                LayerSlot(
+                    layer_id=layer_id,
+                    slot_index=i,
+                    experiment_id=None,
+                    reserved_experiment_id=None,
+                )
+            )
 
         session.commit()
         return layer
@@ -67,31 +78,46 @@ class LayerService:
         if experiment.layer_id != layer.layer_id:
             raise ValueError("Experiment.layer_id must match the target layer")
 
-        # Check traffic capacity
-        current_traffic = sum(e.traffic_percentage for e in layer.experiments if e.status != ExperimentStatus.COMPLETED)
-        if current_traffic + experiment.traffic_percentage > layer.total_traffic_percentage + 1e-9:
-            print("Traffic exceeds capacity")  # TODO replace with logging
+        if experiment.reserved_percentage < experiment.traffic_percentage - 1e-9:
+            raise ValueError("Experiment.reserved_percentage must be >= traffic_percentage")
+
+        # Check reservation capacity
+        current_reserved = sum(
+            e.reserved_percentage for e in layer.experiments if e.status != ExperimentStatus.COMPLETED
+        )
+        if current_reserved + experiment.reserved_percentage > layer.total_traffic_percentage + 1e-9:
+            print("Reservation exceeds capacity")  # TODO replace with logging
             return False
 
-        # Check slot availability
-        slots_needed = math.ceil(experiment.traffic_percentage * layer.total_slots)
+        # Check slot availability for reservation
+        reserved_slots_needed = math.ceil(experiment.reserved_percentage * layer.total_slots)
 
         free_slots = (
             session.execute(
                 select(LayerSlot)
-                .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id.is_(None))
-                .limit(slots_needed)
+                .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.reserved_experiment_id.is_(None))
+                .order_by(LayerSlot.slot_index)
+                .limit(reserved_slots_needed)
             )
             .scalars()
             .all()
         )
 
-        if len(free_slots) < slots_needed:
+        if len(free_slots) < reserved_slots_needed:
             print("Not enough free slots")  # TODO replace with logging
             return False
 
-        # Assign slots to experiment
+        # Reserve slots for experiment
         for slot in free_slots:
+            slot.reserved_experiment_id = experiment.experiment_id
+
+        # Activate slots for current traffic
+        active_slots_needed = math.ceil(experiment.traffic_percentage * layer.total_slots)
+        if active_slots_needed > reserved_slots_needed:
+            raise ValueError("Experiment.traffic_percentage cannot exceed reserved_percentage")
+
+        # Assign slots to experiment
+        for slot in free_slots[:active_slots_needed]:
             slot.experiment_id = experiment.experiment_id
 
         session.add(experiment)
@@ -108,16 +134,19 @@ class LayerService:
         if not experiment:
             return False
 
-        freed_slots = (
+        reserved_slots = (
             session.execute(
-                select(LayerSlot).where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id == experiment_id)
+                select(LayerSlot).where(
+                    LayerSlot.layer_id == layer.layer_id, LayerSlot.reserved_experiment_id == experiment_id
+                )
             )
             .scalars()
             .all()
         )
 
-        for slot in freed_slots:
+        for slot in reserved_slots:
             slot.experiment_id = None
+            slot.reserved_experiment_id = None
 
         # Mark experiment as completed
         experiment.status = ExperimentStatus.COMPLETED
@@ -138,7 +167,7 @@ class LayerService:
         free_slots_result = session.execute(
             select(func.count())
             .select_from(LayerSlot)
-            .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.experiment_id.is_(None))
+            .where(LayerSlot.layer_id == layer.layer_id, LayerSlot.reserved_experiment_id.is_(None))
         ).scalar()
         free_slots = free_slots_result or 0
 
@@ -176,8 +205,8 @@ class LayerService:
 
         result = session.execute(
             update(LayerSlot)
-            .where(LayerSlot.layer_id == layer_id, LayerSlot.experiment_id == experiment_id)
-            .values(experiment_id=None)
+            .where(LayerSlot.layer_id == layer_id, LayerSlot.reserved_experiment_id == experiment_id)
+            .values(experiment_id=None, reserved_experiment_id=None)
         )
         session.commit()
         return result.rowcount

@@ -1,8 +1,10 @@
+import math
 import pytest
 from datetime import datetime, timedelta, UTC
 from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import sessionmaker
 
+from avos.constants import BUCKET_SPACE
 from avos.models.base import Base
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
@@ -47,7 +49,7 @@ class TestLayerCRUD:
 
         assert layer.layer_id == "layer_001"
         assert layer.layer_salt == "salt_123"
-        assert layer.total_slots == 100  # default
+        assert layer.total_slots == BUCKET_SPACE  # default
         assert layer.total_traffic_percentage == 1.0  # default
 
         # Verify layer is in database
@@ -57,25 +59,27 @@ class TestLayerCRUD:
 
     def test_create_layer_with_custom_values(self, db_session):
         """Test creating a layer with custom parameters."""
-        layer = LayerService.create_layer(
-            db_session, "custom_layer", "custom_salt", total_slots=50, total_traffic_percentage=0.8
-        )
+        layer = LayerService.create_layer(db_session, "custom_layer", "custom_salt", total_traffic_percentage=0.8)
 
-        assert layer.total_slots == 50
+        assert layer.total_slots == BUCKET_SPACE
         assert layer.total_traffic_percentage == 0.8
+
+    def test_create_layer_with_custom_total_slots_rejected(self, db_session):
+        with pytest.raises(ValueError, match="total_slots must be"):
+            LayerService.create_layer(db_session, "custom_layer", "custom_salt", total_slots=50)
 
     def test_create_layer_populates_slots(self, db_session):
         """Test that creating a layer pre-populates all slots."""
-        layer = LayerService.create_layer(db_session, "slot_test", "salt", total_slots=20)
+        layer = LayerService.create_layer(db_session, "slot_test", "salt")
         assert layer.layer_id == "slot_test"
 
         # Check all slots were created
         slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "slot_test")).scalars().all()
-        assert len(slots) == 20
+        assert len(slots) == BUCKET_SPACE
 
         # Check slot indices are correct
         slot_indices = [slot.slot_index for slot in slots]
-        assert sorted(slot_indices) == list(range(20))
+        assert sorted(slot_indices) == list(range(BUCKET_SPACE))
 
         # Check all slots are initially empty
         assert all(slot.experiment_id is None for slot in slots)
@@ -96,7 +100,7 @@ class TestLayerCRUD:
 
     def test_delete_layer_exists(self, db_session):
         """Test deleting an existing layer."""
-        LayerService.create_layer(db_session, "delete_test", "salt", total_slots=10)
+        LayerService.create_layer(db_session, "delete_test", "salt")
 
         # Verify layer exists
         layer = db_session.execute(select(Layer).where(Layer.layer_id == "delete_test")).scalar_one_or_none()
@@ -126,7 +130,7 @@ class TestExperimentCRUD:
     def test_add_experiment_success(self, db_session, sample_experiment_data):
         """Test successfully adding an experiment to a layer."""
         # Create layer
-        layer = LayerService.create_layer(db_session, "test_layer", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "test_layer", "salt")
 
         # Create experiment
         experiment = Experiment(**sample_experiment_data)
@@ -148,7 +152,29 @@ class TestExperimentCRUD:
             .select_from(LayerSlot)
             .where(LayerSlot.layer_id == "test_layer", LayerSlot.experiment_id == "test_exp_001")
         ).scalar()
-        assert allocated_slots == 50
+        assert allocated_slots == math.ceil(sample_experiment_data["traffic_percentage"] * BUCKET_SPACE)
+
+    def test_add_experiment_with_reserved_percentage(self, db_session, sample_experiment_data):
+        layer = LayerService.create_layer(db_session, "test_layer", "salt")
+        sample_experiment_data["traffic_percentage"] = 0.3
+        sample_experiment_data["reserved_percentage"] = 0.6
+        experiment = Experiment(**sample_experiment_data)
+
+        success = LayerService.add_experiment(db_session, layer, experiment)
+        assert success is True
+
+        active_slots = db_session.execute(
+            select(func.count())
+            .select_from(LayerSlot)
+            .where(LayerSlot.layer_id == "test_layer", LayerSlot.experiment_id == "test_exp_001")
+        ).scalar()
+        reserved_slots = db_session.execute(
+            select(func.count())
+            .select_from(LayerSlot)
+            .where(LayerSlot.layer_id == "test_layer", LayerSlot.reserved_experiment_id == "test_exp_001")
+        ).scalar()
+        assert active_slots == math.ceil(0.3 * BUCKET_SPACE)
+        assert reserved_slots == math.ceil(0.6 * BUCKET_SPACE)
 
     def test_add_experiment_layer_id_mismatch(self, db_session, sample_experiment_data):
         """Test adding experiment with mismatched layer_id raises error."""
@@ -163,7 +189,7 @@ class TestExperimentCRUD:
         """Test adding experiment that would exceed traffic capacity."""
         # Create layer with limited traffic capacity
         layer = LayerService.create_layer(
-            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=0.6
+            db_session, "test_layer", "salt", total_traffic_percentage=0.6
         )
 
         # Add first experiment (50% traffic)
@@ -180,15 +206,24 @@ class TestExperimentCRUD:
     def test_add_experiment_not_enough_slots(self, db_session, sample_experiment_data):
         """Test adding experiment when not enough free slots available."""
         # Create small layer
-        layer = LayerService.create_layer(db_session, "test_layer", "salt", total_slots=10)
+        layer = LayerService.create_layer(db_session, "test_layer", "salt")
 
-        # Manually occupy 8 slots
-        slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "test_layer").limit(8)).scalars().all()
+        # Manually occupy enough slots to leave fewer than needed
+        slots_needed = math.ceil(sample_experiment_data["traffic_percentage"] * BUCKET_SPACE)
+        slots_to_fill = BUCKET_SPACE - (slots_needed - 1)
+        slots = (
+            db_session.execute(
+                select(LayerSlot).where(LayerSlot.layer_id == "test_layer").limit(slots_to_fill)
+            )
+            .scalars()
+            .all()
+        )
         for slot in slots:
             slot.experiment_id = "existing_exp"
+            slot.reserved_experiment_id = "existing_exp"
         db_session.commit()
 
-        # Try to add experiment requiring 5 slots (50% of 10) - should fail
+        # Try to add experiment requiring more slots than remain - should fail
         experiment = Experiment(**sample_experiment_data)
         success = LayerService.add_experiment(db_session, layer, experiment)
         assert success is False
@@ -196,7 +231,7 @@ class TestExperimentCRUD:
     def test_add_experiment_excludes_completed_experiments_from_traffic(self, db_session, sample_experiment_data):
         """Test that completed experiments don't count toward traffic limit."""
         layer = LayerService.create_layer(
-            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=0.6
+            db_session, "test_layer", "salt", total_traffic_percentage=0.6
         )
 
         # Add completed experiment (50% traffic - shouldn't count)
@@ -215,7 +250,7 @@ class TestExperimentCRUD:
     def test_remove_experiment_success(self, db_session, sample_experiment_data):
         """Test successfully removing an experiment."""
         # Setup: create layer and add experiment
-        layer = LayerService.create_layer(db_session, "test_layer", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "test_layer", "salt")
         experiment = Experiment(**sample_experiment_data)
         LayerService.add_experiment(db_session, layer, experiment)
 
@@ -279,13 +314,13 @@ class TestLayerInfo:
 
     def test_get_layer_info_empty_layer(self, db_session):
         """Test getting info for a layer with no experiments."""
-        layer = LayerService.create_layer(db_session, "empty_layer", "salt", total_slots=50)
+        layer = LayerService.create_layer(db_session, "empty_layer", "salt")
 
         info = LayerService.get_layer_info(db_session, layer)
 
         assert info["layer_id"] == "empty_layer"
-        assert info["total_slots"] == 50
-        assert info["free_slots"] == 50
+        assert info["total_slots"] == BUCKET_SPACE
+        assert info["free_slots"] == BUCKET_SPACE
         assert info["used_slots"] == 0
         assert info["utilization_percentage"] == 0.0
         assert info["active_experiments"] == 0
@@ -293,7 +328,7 @@ class TestLayerInfo:
 
     def test_get_layer_info_with_experiments(self, db_session, sample_experiment_data):
         """Test getting info for a layer with experiments."""
-        layer = LayerService.create_layer(db_session, "info_layer", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "info_layer", "salt")
 
         # Add active experiment (50% traffic = 50 slots)
         sample_experiment_data["layer_id"] = "info_layer"
@@ -310,17 +345,17 @@ class TestLayerInfo:
         info = LayerService.get_layer_info(db_session, layer)
 
         assert info["layer_id"] == "info_layer"
-        assert info["total_slots"] == 100
-        assert info["free_slots"] == 20  # 100 - 50 - 30
-        assert info["used_slots"] == 80  # 50 + 30
+        assert info["total_slots"] == BUCKET_SPACE
+        assert info["free_slots"] == 200  # 1000 - 500 - 300
+        assert info["used_slots"] == 800  # 500 + 300
         assert info["utilization_percentage"] == 80.0
         assert info["active_experiments"] == 1  # Only one ACTIVE experiment
-        assert info["experiment_slot_counts"]["test_exp_001"] == 50
-        assert info["experiment_slot_counts"]["test_exp_002"] == 30
+        assert info["experiment_slot_counts"]["test_exp_001"] == 500
+        assert info["experiment_slot_counts"]["test_exp_002"] == 300
 
     def test_get_layer_info_with_completed_experiments(self, db_session, sample_experiment_data):
         """Test that completed experiments show up in slot counts but not active count."""
-        layer = LayerService.create_layer(db_session, "completed_layer", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "completed_layer", "salt")
 
         # Add and then remove experiment (marks as COMPLETED)
         sample_experiment_data["layer_id"] = "completed_layer"
@@ -331,7 +366,7 @@ class TestLayerInfo:
         info = LayerService.get_layer_info(db_session, layer)
 
         assert info["active_experiments"] == 0  # No active experiments
-        assert info["free_slots"] == 100  # All slots freed
+        assert info["free_slots"] == BUCKET_SPACE  # All slots freed
         assert info["used_slots"] == 0
 
 
@@ -340,15 +375,12 @@ class TestLayerServiceEdgeCases:
 
     def test_create_layer_with_zero_slots(self, db_session):
         """Test creating a layer with zero slots."""
-        layer = LayerService.create_layer(db_session, "zero_slots", "salt", total_slots=0)
-
-        assert layer.total_slots == 0
-        slots = db_session.execute(select(LayerSlot).where(LayerSlot.layer_id == "zero_slots")).scalars().all()
-        assert len(slots) == 0
+        with pytest.raises(ValueError, match="total_slots must be"):
+            LayerService.create_layer(db_session, "zero_slots", "salt", total_slots=0)
 
     def test_add_experiment_zero_traffic_percentage(self, db_session, sample_experiment_data):
         """Test adding experiment with 0% traffic."""
-        layer = LayerService.create_layer(db_session, "zero_traffic", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "zero_traffic", "salt")
 
         sample_experiment_data["layer_id"] = "zero_traffic"
         sample_experiment_data["traffic_percentage"] = 0.0
@@ -367,7 +399,7 @@ class TestLayerServiceEdgeCases:
 
     def test_add_experiment_100_percent_traffic(self, db_session, sample_experiment_data):
         """Test adding experiment with 100% traffic."""
-        layer = LayerService.create_layer(db_session, "full_traffic", "salt", total_slots=50)
+        layer = LayerService.create_layer(db_session, "full_traffic", "salt")
 
         sample_experiment_data["layer_id"] = "full_traffic"
         sample_experiment_data["traffic_percentage"] = 1.0
@@ -382,11 +414,11 @@ class TestLayerServiceEdgeCases:
             .select_from(LayerSlot)
             .where(LayerSlot.layer_id == "full_traffic", LayerSlot.experiment_id == "test_exp_001")
         ).scalar()
-        assert allocated_slots == 50
+        assert allocated_slots == BUCKET_SPACE
 
     def test_multiple_experiments_different_traffic_percentages(self, db_session, sample_experiment_data):
         """Test adding multiple experiments with different traffic percentages."""
-        layer = LayerService.create_layer(db_session, "multi_exp", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "multi_exp", "salt")
 
         # Add 30% experiment
         sample_experiment_data["layer_id"] = "multi_exp"
@@ -412,9 +444,9 @@ class TestLayerServiceEdgeCases:
 
         # Verify slot allocation
         info = LayerService.get_layer_info(db_session, layer)
-        assert info["experiment_slot_counts"]["exp_30"] == 30
-        assert info["experiment_slot_counts"]["exp_25"] == 25
-        assert info["experiment_slot_counts"]["exp_45"] == 45
+        assert info["experiment_slot_counts"]["exp_30"] == 300
+        assert info["experiment_slot_counts"]["exp_25"] == 250
+        assert info["experiment_slot_counts"]["exp_45"] == 450
         assert info["free_slots"] == 0
 
 
@@ -425,7 +457,7 @@ class TestLayerServiceIntegration:
     def test_full_layer_lifecycle(self, db_session, sample_experiment_data):
         """Test complete layer lifecycle: create, add experiments, get info, remove, delete."""
         # Create layer
-        layer = LayerService.create_layer(db_session, "lifecycle", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "lifecycle", "salt")
 
         # Add experiment
         sample_experiment_data["layer_id"] = "lifecycle"
@@ -435,7 +467,7 @@ class TestLayerServiceIntegration:
         # Check layer info
         info = LayerService.get_layer_info(db_session, layer)
         assert info["active_experiments"] == 1
-        assert info["used_slots"] == 50
+        assert info["used_slots"] == 500
 
         # Remove experiment
         LayerService.remove_experiment(db_session, layer, "test_exp_001")

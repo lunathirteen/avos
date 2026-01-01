@@ -25,7 +25,7 @@ def db_session():
 @pytest.fixture
 def sample_layer(db_session):
     """Create a sample layer for testing."""
-    layer = LayerService.create_layer(db_session, layer_id="test_layer", layer_salt="test_salt", total_slots=100)
+    layer = LayerService.create_layer(db_session, layer_id="test_layer", layer_salt="test_salt")
     return layer
 
 
@@ -258,7 +258,7 @@ class TestExperimentIntegration:
     def test_add_experiment_to_layer(self, db_session):
         """Test adding experiment to layer via LayerService."""
         # Create layer
-        layer = LayerService.create_layer(db_session, "integration_layer", "salt", total_slots=100)
+        layer = LayerService.create_layer(db_session, "integration_layer", "salt")
 
         # Create experiment
         exp = Experiment(

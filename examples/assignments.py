@@ -8,6 +8,7 @@ from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
 from avos.services.assignment_service import AssignmentService
 from avos.services.assignment_logger import LocalAssignmentLogger
+from avos.constants import BUCKET_SPACE
 from avos.utils.datetime_utils import utc_now
 
 
@@ -27,7 +28,7 @@ def main():
         session,
         layer_id="homepage_hero",
         layer_salt="homepage_salt_2025",
-        total_slots=1000,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
     )
 
@@ -35,7 +36,7 @@ def main():
         session,
         layer_id="checkout_flow",
         layer_salt="checkout_salt_2025",
-        total_slots=500,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
     )
 

@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import sessionmaker
 
+from avos.constants import BUCKET_SPACE
 from avos.models.base import Base
 from avos.models.experiment import ExperimentStatus
 from avos.models.layer import LayerSlot
@@ -25,7 +26,7 @@ def test_apply_layer_configs_creates_layer_and_experiment(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -51,14 +52,14 @@ def test_apply_layer_configs_creates_layer_and_experiment(db_session):
         .select_from(LayerSlot)
         .where(LayerSlot.layer_id == "layer_sync", LayerSlot.experiment_id == "exp_sync")
     ).scalar()
-    assert allocated_slots == 5
+    assert allocated_slots == BUCKET_SPACE // 2
 
 
 def test_apply_layer_configs_completed_frees_slots(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -77,7 +78,7 @@ def test_apply_layer_configs_completed_frees_slots(db_session):
     completed_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -109,7 +110,7 @@ def test_apply_layer_configs_variants_change_rejected(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -127,7 +128,7 @@ def test_apply_layer_configs_variants_change_rejected(db_session):
     changed = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -149,7 +150,7 @@ def test_apply_layer_configs_allocation_change_rejected(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -167,7 +168,7 @@ def test_apply_layer_configs_allocation_change_rejected(db_session):
     changed_allocation = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -185,11 +186,11 @@ def test_apply_layer_configs_allocation_change_rejected(db_session):
         apply_layer_configs(db_session, [changed_allocation])
 
 
-def test_apply_layer_configs_winner_allocation_allowed_on_completed(db_session):
+def test_apply_layer_configs_allocation_change_rejected_when_completed(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -207,7 +208,7 @@ def test_apply_layer_configs_winner_allocation_allowed_on_completed(db_session):
     completed = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -221,18 +222,15 @@ def test_apply_layer_configs_winner_allocation_allowed_on_completed(db_session):
         ],
     )
 
-    apply_layer_configs(db_session, [completed])
-
-    experiment = LayerService.get_experiment(db_session, "exp_sync")
-    assert experiment.get_traffic_dict() == {"A": 1.0, "B": 0.0}
-    assert experiment.status == ExperimentStatus.COMPLETED
+    with pytest.raises(ValueError, match="traffic_allocation cannot be changed"):
+        apply_layer_configs(db_session, [completed])
 
 
-def test_apply_layer_configs_winner_allocation_rejected_when_active(db_session):
+def test_apply_layer_configs_allocation_change_rejected_when_active(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -247,10 +245,10 @@ def test_apply_layer_configs_winner_allocation_rejected_when_active(db_session):
     )
     apply_layer_configs(db_session, [layer_config])
 
-    winner_active = LayerConfig(
+    changed_allocation = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -264,15 +262,15 @@ def test_apply_layer_configs_winner_allocation_rejected_when_active(db_session):
         ],
     )
 
-    with pytest.raises(ValueError, match="winner allocation is allowed only when status is completed"):
-        apply_layer_configs(db_session, [winner_active])
+    with pytest.raises(ValueError, match="traffic_allocation cannot be changed"):
+        apply_layer_configs(db_session, [changed_allocation])
 
 
 def test_apply_layer_configs_traffic_percentage_ramp_up(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -291,7 +289,7 @@ def test_apply_layer_configs_traffic_percentage_ramp_up(db_session):
     ramped = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -312,14 +310,14 @@ def test_apply_layer_configs_traffic_percentage_ramp_up(db_session):
         .select_from(LayerSlot)
         .where(LayerSlot.layer_id == "layer_sync", LayerSlot.experiment_id == "exp_sync")
     ).scalar()
-    assert allocated_slots == 5
+    assert allocated_slots == BUCKET_SPACE // 2
 
 
 def test_apply_layer_configs_traffic_percentage_decrease_rejected(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
@@ -338,7 +336,7 @@ def test_apply_layer_configs_traffic_percentage_decrease_rejected(db_session):
     decreased = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
-        total_slots=10,
+        total_slots=BUCKET_SPACE,
         total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(

@@ -53,7 +53,6 @@ Example layer config:
 ```yaml
 layer_id: homepage_hero
 layer_salt: homepage_salt_2025
-total_slots: 100
 total_traffic_percentage: 1.0
 experiments:
   - experiment_id: hero_button_colors_v1
@@ -64,6 +63,7 @@ experiments:
     status: active
     splitter_type: hash
     traffic_percentage: 0.6
+    reserved_percentage: 0.8
 ```
 
 ## Config Rules (Validation)
@@ -72,15 +72,18 @@ experiments:
 - `variants` must be unique and non-empty
 - `segment_allocations`/`geo_allocations`/`stratum_allocations` require matching `splitter_type`
 - `traffic_percentage` must be between `0` and `1`
+- `reserved_percentage` is optional (defaults to `traffic_percentage`) and must be `>= traffic_percentage`
 - `traffic_percentage` can only increase for an existing experiment (ramp up)
 - `start_date` must be before `end_date` if both are set
-- `total_slots` must be positive; `total_traffic_percentage` is `0 < x <= 1`
+- `total_slots` is fixed to `1000` (bucket space); optional in YAML and must match if provided
+- `total_traffic_percentage` is `0 < x <= 1`
 
 ## Sync Rules (Safety)
 
 - Experiments are **not** deleted implicitly. To remove, set `status: completed`
 - `variants`, `splitter_type`, and `layer_id` are immutable after creation
-- Allocation changes require a new experiment; winner rollout (one variant `1.0`, others `0.0`) is allowed only when `status: completed`
+- Allocation changes require a new experiment
+- `reserved_percentage` can only increase for an existing experiment
 - Completed experiments cannot be modified
 
 ## Notes

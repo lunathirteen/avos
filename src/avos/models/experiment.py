@@ -40,6 +40,7 @@ class Experiment(Base):
     # Fields with defaults
     splitter_type: Mapped[str] = mapped_column(String, default="hash")  # e.g. "hash", "geo", "stratified"
     traffic_percentage: Mapped[float] = mapped_column(Float, default=1.0)
+    reserved_percentage: Mapped[float] = mapped_column(Float, default=1.0)
     status: Mapped[ExperimentStatus] = mapped_column(SQLEnum(ExperimentStatus), default=ExperimentStatus.DRAFT)
     priority: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -69,6 +70,8 @@ class Experiment(Base):
         kw["end_date"] = to_utc(end_date)
         kw["created_at"] = to_utc(created_at) or utc_now()
         kw["updated_at"] = to_utc(updated_at) or utc_now()
+        if "reserved_percentage" not in kw or kw["reserved_percentage"] is None:
+            kw["reserved_percentage"] = kw.get("traffic_percentage", 1.0)
         if "segment_allocations" in kw and kw["segment_allocations"] is not None:
             if not isinstance(kw["segment_allocations"], str):
                 kw["segment_allocations"] = json.dumps(kw["segment_allocations"])
