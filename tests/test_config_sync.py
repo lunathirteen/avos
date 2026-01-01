@@ -143,3 +143,215 @@ def test_apply_layer_configs_variants_change_rejected(db_session):
 
     with pytest.raises(ValueError, match="variants cannot be changed"):
         apply_layer_configs(db_session, [changed])
+
+
+def test_apply_layer_configs_allocation_change_rejected(db_session):
+    layer_config = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.5, "B": 0.5},
+                status="active",
+            )
+        ],
+    )
+    apply_layer_configs(db_session, [layer_config])
+
+    changed_allocation = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.7, "B": 0.3},
+                status="active",
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="traffic_allocation cannot be changed"):
+        apply_layer_configs(db_session, [changed_allocation])
+
+
+def test_apply_layer_configs_winner_allocation_allowed_on_completed(db_session):
+    layer_config = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.5, "B": 0.5},
+                status="active",
+            )
+        ],
+    )
+    apply_layer_configs(db_session, [layer_config])
+
+    completed = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 1.0, "B": 0.0},
+                status="completed",
+            )
+        ],
+    )
+
+    apply_layer_configs(db_session, [completed])
+
+    experiment = LayerService.get_experiment(db_session, "exp_sync")
+    assert experiment.get_traffic_dict() == {"A": 1.0, "B": 0.0}
+    assert experiment.status == ExperimentStatus.COMPLETED
+
+
+def test_apply_layer_configs_winner_allocation_rejected_when_active(db_session):
+    layer_config = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.5, "B": 0.5},
+                status="active",
+            )
+        ],
+    )
+    apply_layer_configs(db_session, [layer_config])
+
+    winner_active = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 1.0, "B": 0.0},
+                status="active",
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="winner allocation is allowed only when status is completed"):
+        apply_layer_configs(db_session, [winner_active])
+
+
+def test_apply_layer_configs_traffic_percentage_ramp_up(db_session):
+    layer_config = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.5, "B": 0.5},
+                status="active",
+                traffic_percentage=0.3,
+            )
+        ],
+    )
+    apply_layer_configs(db_session, [layer_config])
+
+    ramped = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.5, "B": 0.5},
+                status="active",
+                traffic_percentage=0.5,
+            )
+        ],
+    )
+    apply_layer_configs(db_session, [ramped])
+
+    allocated_slots = db_session.execute(
+        select(func.count())
+        .select_from(LayerSlot)
+        .where(LayerSlot.layer_id == "layer_sync", LayerSlot.experiment_id == "exp_sync")
+    ).scalar()
+    assert allocated_slots == 5
+
+
+def test_apply_layer_configs_traffic_percentage_decrease_rejected(db_session):
+    layer_config = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.5, "B": 0.5},
+                status="active",
+                traffic_percentage=0.5,
+            )
+        ],
+    )
+    apply_layer_configs(db_session, [layer_config])
+
+    decreased = LayerConfig(
+        layer_id="layer_sync",
+        layer_salt="salt_sync",
+        total_slots=10,
+        total_traffic_percentage=1.0,
+        experiments=[
+            ExperimentConfig(
+                experiment_id="exp_sync",
+                layer_id="layer_sync",
+                name="Sync Test",
+                variants=["A", "B"],
+                traffic_allocation={"A": 0.5, "B": 0.5},
+                status="active",
+                traffic_percentage=0.3,
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="traffic_percentage cannot decrease"):
+        apply_layer_configs(db_session, [decreased])
