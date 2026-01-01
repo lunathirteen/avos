@@ -4,6 +4,7 @@ from avos.services.assignment_service import AssignmentService
 from avos.services.splitter import HashBasedSplitter
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment
+from avos.srm_tester import SRMTester
 
 
 def make_layer(layer_id="layer1", salt="abc", slots=5):
@@ -118,6 +119,20 @@ def test_preview_assignment_distribution(monkeypatch):
     assert "assignment_distribution" in preview
     assert preview["unassigned_count"] == 0
     assert preview["assignment_rate"] == 100.0
+
+
+def test_preview_assignment_metrics_with_srm():
+    layer = make_layer()
+    slot = make_slot(layer.layer_id, 0, "exp1")
+    exp = make_experiment()
+    session = MagicMock()
+    session.execute.return_value.scalar_one_or_none.return_value = slot
+    session.get.return_value = exp
+    uids = [f"user{i}" for i in range(100)]
+
+    metrics = AssignmentService.preview_assignment_metrics(session, layer, uids, srm_tester=SRMTester())
+    assert "srm_results" in metrics
+    assert "exp1" in metrics["srm_results"]
 
 
 def test_assignment_with_percentage_allocations_rejected():

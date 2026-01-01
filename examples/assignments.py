@@ -7,8 +7,9 @@ from avos.models.base import Base
 from avos.models.experiment import Experiment, ExperimentStatus
 from avos.services.layer_service import LayerService
 from avos.services.assignment_service import AssignmentService
-from avos.services.assignment_logger import MotherDuckAssignmentLogger
+from avos.services.assignment_logger import LocalAssignmentLogger
 from avos.utils.datetime_utils import utc_now
+
 
 def main():
     # Database setup
@@ -76,7 +77,7 @@ def main():
     print(f"✅ Payment experiment added: {success}")
 
     # Step 3: Single user assignment
-    assignment_logger = MotherDuckAssignmentLogger()
+    assignment_logger = LocalAssignmentLogger("examples/assignments.duckdb")
 
     print("\n👤 Single user assignment demo...")
 

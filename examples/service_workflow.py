@@ -6,9 +6,10 @@ from sqlalchemy.orm import sessionmaker
 from avos.models.base import Base
 from avos.services.assignment_service import AssignmentService
 from avos.services.config_sync import apply_layer_configs
+from avos.services.assignment_logger import LocalAssignmentLogger
 from avos.services.layer_service import LayerService
+from avos.srm_tester import SRMTester
 from avos.utils.config_loader import load_layer_configs_from_dir
-
 
 def apply_and_report(session, config_dir: Path, label: str) -> None:
     configs = load_layer_configs_from_dir(str(config_dir))
@@ -44,6 +45,16 @@ def show_assignments(session, unit_id: str) -> None:
         )
 
 
+def show_metrics(session, sample_unit_ids) -> None:
+    layers = LayerService.get_layers(session)
+    tester = SRMTester()
+    for layer in layers:
+        metrics = AssignmentService.preview_assignment_metrics(session, layer, sample_unit_ids, srm_tester=tester)
+        print(f"metrics layer_id={layer.layer_id} assignment_rate={metrics['assignment_rate']}")
+        for exp_id, result in metrics.get("srm_results", {}).items():
+            print(f"  srm {exp_id}: {result}")
+
+
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     config_root = root / "examples" / "configs"
@@ -58,9 +69,21 @@ def main() -> None:
     try:
         apply_and_report(session, config_v1, "apply v1 configs")
         show_assignments(session, "user_123")
+        show_metrics(session, [f"user_{i}" for i in range(200)])
+
+        logger = LocalAssignmentLogger("examples/workflow_assignments.duckdb")
+        try:
+            layer = LayerService.get_layer(session, "homepage_hero")
+            if layer:
+                AssignmentService.assign_for_layer(session, layer, "user_456", assignment_logger=logger)
+                count = logger.con.execute("SELECT COUNT(*) FROM user_assignments").fetchone()[0]
+                print(f"logged_assignments={count}")
+        finally:
+            logger.close()
 
         apply_and_report(session, config_v2, "apply v2 configs")
         show_assignments(session, "user_123")
+        show_metrics(session, [f"user_{i}" for i in range(200)])
     finally:
         session.close()
 
