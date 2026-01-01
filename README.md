@@ -53,7 +53,6 @@ Example layer config:
 ```yaml
 layer_id: homepage_hero
 layer_salt: homepage_salt_2025
-total_slots: 100
 total_traffic_percentage: 1.0
 experiments:
   - experiment_id: hero_button_colors_v1
@@ -74,7 +73,8 @@ experiments:
 - `traffic_percentage` must be between `0` and `1`
 - `traffic_percentage` can only increase for an existing experiment (ramp up)
 - `start_date` must be before `end_date` if both are set
-- `total_slots` must be positive; `total_traffic_percentage` is `0 < x <= 1`
+- `total_slots` is fixed to `1000` (bucket space); optional in YAML and must match if provided
+- `total_traffic_percentage` is `0 < x <= 1`
 
 ## Sync Rules (Safety)
 

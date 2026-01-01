@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
 from typing import List, Dict, Optional, Literal
 
+from avos.constants import BUCKET_SPACE
 
 _ALLOC_TOLERANCE = 1e-6
 _ALLOWED_SPLITTER_TYPES = {"hash", "random", "stratified", "geo", "segment"}
@@ -96,15 +97,15 @@ class ExperimentConfig(BaseModel):
 class LayerConfig(BaseModel):
     layer_id: str
     layer_salt: str
-    total_slots: int = 100
+    total_slots: int = BUCKET_SPACE
     total_traffic_percentage: float = 1.0
     experiments: List[ExperimentConfig] = Field(default_factory=list)
     slots: Optional[List[LayerSlotConfig]] = None
 
     @model_validator(mode="after")
     def validate_layer(self):
-        if self.total_slots <= 0:
-            raise ValueError("total_slots must be positive")
+        if self.total_slots != BUCKET_SPACE:
+            raise ValueError(f"total_slots must be {BUCKET_SPACE} for fixed bucket space")
         if self.total_traffic_percentage <= 0 or self.total_traffic_percentage > 1:
             raise ValueError("total_traffic_percentage must be between 0 and 1")
         if self.slots:

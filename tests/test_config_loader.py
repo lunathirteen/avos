@@ -1,3 +1,4 @@
+from avos.constants import BUCKET_SPACE
 from avos.utils.config_loader import load_experiment_config, load_layer_config, load_layer_configs_from_dir
 
 
@@ -23,7 +24,6 @@ def test_load_layer(tmp_path):
     yaml_content = """
         layer_id: layer123
         layer_salt: test_salt
-        total_slots: 50
         total_traffic_percentage: 0.95
     """
     yaml_file = tmp_path / "layer.yaml"
@@ -32,7 +32,7 @@ def test_load_layer(tmp_path):
 
     cfg = load_layer_config(str(yaml_file))
     assert cfg.layer_id == "layer123"
-    assert cfg.total_slots == 50
+    assert cfg.total_slots == BUCKET_SPACE
     assert cfg.total_traffic_percentage == 0.95
 
 
@@ -40,13 +40,11 @@ def test_load_layer_configs_from_dir(tmp_path):
     layer_a = """
         layer_id: layer_a
         layer_salt: salt_a
-        total_slots: 10
         total_traffic_percentage: 0.9
     """
     layer_b = """
         layer_id: layer_b
         layer_salt: salt_b
-        total_slots: 20
         total_traffic_percentage: 0.8
     """
     (tmp_path / "b_layer.yaml").write_text(layer_b)

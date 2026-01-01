@@ -4,6 +4,7 @@ import math
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 
+from avos.constants import BUCKET_SPACE
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment, ExperimentStatus
 
@@ -17,10 +18,13 @@ class LayerService:
         session: Session,
         layer_id: str,
         layer_salt: str,
-        total_slots: int = 100,
+        total_slots: int = BUCKET_SPACE,
         total_traffic_percentage: float = 1.0,
     ) -> Layer:
         """Create a new layer with pre-allocated empty slots."""
+        if total_slots != BUCKET_SPACE:
+            raise ValueError(f"total_slots must be {BUCKET_SPACE} for fixed bucket space")
+
         layer = Layer(
             layer_id=layer_id,
             layer_salt=layer_salt,

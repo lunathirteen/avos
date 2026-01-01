@@ -5,6 +5,7 @@ from typing import List, TYPE_CHECKING
 from sqlalchemy import String, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
+from avos.constants import BUCKET_SPACE
 from avos.models.base import Base
 from avos.utils.datetime_utils import utc_now
 
@@ -18,7 +19,7 @@ class Layer(Base):
     layer_id: Mapped[str] = mapped_column(String, primary_key=True)
     layer_salt: Mapped[str] = mapped_column(String, nullable=False)
 
-    total_slots: Mapped[int] = mapped_column(Integer, default=100)
+    total_slots: Mapped[int] = mapped_column(Integer, default=BUCKET_SPACE)
     total_traffic_percentage: Mapped[float] = mapped_column(Float, default=1.0)
 
     # UTC timezone-aware timestamps

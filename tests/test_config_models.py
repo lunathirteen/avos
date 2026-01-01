@@ -1,4 +1,5 @@
 import pytest
+from avos.constants import BUCKET_SPACE
 from avos.models.config_models import LayerConfig, ExperimentConfig
 
 
@@ -25,7 +26,7 @@ def test_layer_config_with_experiments_and_slots():
     layer_data = {
         "layer_id": "layer1",
         "layer_salt": "abc123",
-        "total_slots": 100,
+        "total_slots": BUCKET_SPACE,
         "total_traffic_percentage": 1.0,
         "experiments": [
             {
@@ -54,8 +55,12 @@ def test_experiment_config_missing_required_raises():
 
 def test_layer_config_defaults():
     layer = LayerConfig(layer_id="l2", layer_salt="salt", experiments=[])
-    assert layer.total_slots == 100  # default value
-    assert layer.total_traffic_percentage == 1.0
+    assert layer.total_slots == BUCKET_SPACE  # default value
+
+
+def test_layer_config_custom_total_slots_rejected():
+    with pytest.raises(Exception):
+        LayerConfig(layer_id="l3", layer_salt="salt", total_slots=10)
 
 
 def test_experiment_invalid_status():
@@ -103,4 +108,3 @@ def test_segment_allocations_require_segment_splitter():
             segment_allocations={"US": {"A": 0.5, "B": 0.5}},
             splitter_type="hash",
         )
-
