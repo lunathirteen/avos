@@ -103,3 +103,4 @@ def test_segment_allocations_require_segment_splitter():
             segment_allocations={"US": {"A": 0.5, "B": 0.5}},
             splitter_type="hash",
         )
+
