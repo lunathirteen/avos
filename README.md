@@ -87,3 +87,25 @@ experiments:
 
 - Assignments are deterministic for hash-based splitters.
 - Segment/geo/stratum allocations use the same `variants` keys and `0–1` fractions.
+
+## Observability
+
+Log assignments with a local logger that implements `log_assignments(assignments)`:
+
+```python
+from avos.services.assignment_logger import LocalAssignmentLogger
+from avos.services.assignment_service import AssignmentService
+
+logger = LocalAssignmentLogger("avos_assignments.duckdb")
+assignment = AssignmentService.assign_for_layer(session, layer, "user_123", assignment_logger=logger)
+```
+
+Preview assignment metrics with SRM checks:
+
+```python
+from avos.srm_tester import SRMTester
+
+metrics = AssignmentService.preview_assignment_metrics(
+    session, layer, sample_unit_ids, srm_tester=SRMTester()
+)
+```
