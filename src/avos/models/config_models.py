@@ -64,7 +64,7 @@ class ExperimentConfig(BaseModel):
     geo_allocations: Optional[Dict[str, Dict[str, float]]] = None
     stratum_allocations: Optional[Dict[str, Dict[str, float]]] = None
     splitter_type: Optional[str] = "hash"
-    traffic_percentage: float = 100.0
+    traffic_percentage: float = 1.0
     priority: int = 0
 
     @model_validator(mode="after")
@@ -75,8 +75,8 @@ class ExperimentConfig(BaseModel):
         _validate_segmented_allocations(self.variants, self.geo_allocations, "geo_allocations")
         _validate_segmented_allocations(self.variants, self.stratum_allocations, "stratum_allocations")
 
-        if self.traffic_percentage < 0 or self.traffic_percentage > 100:
-            raise ValueError("traffic_percentage must be between 0 and 100")
+        if self.traffic_percentage < 0 or self.traffic_percentage > 1:
+            raise ValueError("traffic_percentage must be between 0 and 1")
         if self.splitter_type is not None and self.splitter_type not in _ALLOWED_SPLITTER_TYPES:
             raise ValueError(f"splitter_type must be one of {sorted(_ALLOWED_SPLITTER_TYPES)}")
 
@@ -97,7 +97,7 @@ class LayerConfig(BaseModel):
     layer_id: str
     layer_salt: str
     total_slots: int = 100
-    total_traffic_percentage: float = 100.0
+    total_traffic_percentage: float = 1.0
     experiments: List[ExperimentConfig] = Field(default_factory=list)
     slots: Optional[List[LayerSlotConfig]] = None
 
@@ -105,8 +105,8 @@ class LayerConfig(BaseModel):
     def validate_layer(self):
         if self.total_slots <= 0:
             raise ValueError("total_slots must be positive")
-        if self.total_traffic_percentage <= 0 or self.total_traffic_percentage > 100:
-            raise ValueError("total_traffic_percentage must be between 0 and 100")
+        if self.total_traffic_percentage <= 0 or self.total_traffic_percentage > 1:
+            raise ValueError("total_traffic_percentage must be between 0 and 1")
         if self.slots:
             seen = set()
             for slot in self.slots:

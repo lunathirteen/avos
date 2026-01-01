@@ -54,7 +54,7 @@ Example layer config:
 layer_id: homepage_hero
 layer_salt: homepage_salt_2025
 total_slots: 100
-total_traffic_percentage: 100.0
+total_traffic_percentage: 1.0
 experiments:
   - experiment_id: hero_button_colors_v1
     layer_id: homepage_hero
@@ -63,7 +63,7 @@ experiments:
     traffic_allocation: {blue: 0.5, green: 0.5}
     status: active
     splitter_type: hash
-    traffic_percentage: 60.0
+    traffic_percentage: 0.6
 ```
 
 ## Config Rules (Validation)
@@ -71,9 +71,9 @@ experiments:
 - `traffic_allocation` must sum to `1.0`, keys must match `variants`
 - `variants` must be unique and non-empty
 - `segment_allocations`/`geo_allocations`/`stratum_allocations` require matching `splitter_type`
-- `traffic_percentage` must be between `0` and `100`
+- `traffic_percentage` must be between `0` and `1`
 - `start_date` must be before `end_date` if both are set
-- `total_slots` must be positive; `total_traffic_percentage` is `0 < x <= 100`
+- `total_slots` must be positive; `total_traffic_percentage` is `0 < x <= 1`
 
 ## Sync Rules (Safety)
 

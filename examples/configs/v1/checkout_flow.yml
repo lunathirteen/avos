@@ -1,7 +1,7 @@
 layer_id: checkout_flow
 layer_salt: checkout_salt_2025
 total_slots: 50
-total_traffic_percentage: 80.0
+total_traffic_percentage: 0.8
 experiments:
   - experiment_id: checkout_payment_v1
     layer_id: checkout_flow
@@ -10,4 +10,4 @@ experiments:
     traffic_allocation: {card_first: 0.7, wallet_first: 0.3}
     status: active
     splitter_type: hash
-    traffic_percentage: 50.0
+    traffic_percentage: 0.5

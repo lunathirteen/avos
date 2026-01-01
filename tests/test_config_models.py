@@ -26,7 +26,7 @@ def test_layer_config_with_experiments_and_slots():
         "layer_id": "layer1",
         "layer_salt": "abc123",
         "total_slots": 100,
-        "total_traffic_percentage": 100.0,
+        "total_traffic_percentage": 1.0,
         "experiments": [
             {
                 "experiment_id": "exp2",
@@ -55,7 +55,7 @@ def test_experiment_config_missing_required_raises():
 def test_layer_config_defaults():
     layer = LayerConfig(layer_id="l2", layer_salt="salt", experiments=[])
     assert layer.total_slots == 100  # default value
-    assert layer.total_traffic_percentage == 100.0
+    assert layer.total_traffic_percentage == 1.0
 
 
 def test_experiment_invalid_status():

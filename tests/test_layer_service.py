@@ -30,7 +30,7 @@ def sample_experiment_data():
         "name": "Test Experiment",
         "variants": ["control", "treatment"],
         "traffic_allocation": {"control": 0.5, "treatment": 0.5},
-        "traffic_percentage": 50.0,
+        "traffic_percentage": 0.5,
         "start_date": datetime.now(UTC),
         "end_date": datetime.now(UTC) + timedelta(days=7),
         "status": ExperimentStatus.ACTIVE,
@@ -48,7 +48,7 @@ class TestLayerCRUD:
         assert layer.layer_id == "layer_001"
         assert layer.layer_salt == "salt_123"
         assert layer.total_slots == 100  # default
-        assert layer.total_traffic_percentage == 100.0  # default
+        assert layer.total_traffic_percentage == 1.0  # default
 
         # Verify layer is in database
         saved_layer = db_session.execute(select(Layer).where(Layer.layer_id == "layer_001")).scalar_one_or_none()
@@ -58,11 +58,11 @@ class TestLayerCRUD:
     def test_create_layer_with_custom_values(self, db_session):
         """Test creating a layer with custom parameters."""
         layer = LayerService.create_layer(
-            db_session, "custom_layer", "custom_salt", total_slots=50, total_traffic_percentage=80.0
+            db_session, "custom_layer", "custom_salt", total_slots=50, total_traffic_percentage=0.8
         )
 
         assert layer.total_slots == 50
-        assert layer.total_traffic_percentage == 80.0
+        assert layer.total_traffic_percentage == 0.8
 
     def test_create_layer_populates_slots(self, db_session):
         """Test that creating a layer pre-populates all slots."""
@@ -163,7 +163,7 @@ class TestExperimentCRUD:
         """Test adding experiment that would exceed traffic capacity."""
         # Create layer with limited traffic capacity
         layer = LayerService.create_layer(
-            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=60.0
+            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=0.6
         )
 
         # Add first experiment (50% traffic)
@@ -196,7 +196,7 @@ class TestExperimentCRUD:
     def test_add_experiment_excludes_completed_experiments_from_traffic(self, db_session, sample_experiment_data):
         """Test that completed experiments don't count toward traffic limit."""
         layer = LayerService.create_layer(
-            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=60.0
+            db_session, "test_layer", "salt", total_slots=100, total_traffic_percentage=0.6
         )
 
         # Add completed experiment (50% traffic - shouldn't count)
@@ -302,7 +302,7 @@ class TestLayerInfo:
 
         # Add draft experiment (30% traffic = 30 slots)
         sample_experiment_data["experiment_id"] = "test_exp_002"
-        sample_experiment_data["traffic_percentage"] = 30.0
+        sample_experiment_data["traffic_percentage"] = 0.3
         sample_experiment_data["status"] = ExperimentStatus.DRAFT
         exp2 = Experiment(**sample_experiment_data)
         LayerService.add_experiment(db_session, layer, exp2)
@@ -370,7 +370,7 @@ class TestLayerServiceEdgeCases:
         layer = LayerService.create_layer(db_session, "full_traffic", "salt", total_slots=50)
 
         sample_experiment_data["layer_id"] = "full_traffic"
-        sample_experiment_data["traffic_percentage"] = 100.0
+        sample_experiment_data["traffic_percentage"] = 1.0
         exp = Experiment(**sample_experiment_data)
 
         success = LayerService.add_experiment(db_session, layer, exp)
@@ -391,21 +391,21 @@ class TestLayerServiceEdgeCases:
         # Add 30% experiment
         sample_experiment_data["layer_id"] = "multi_exp"
         sample_experiment_data["experiment_id"] = "exp_30"
-        sample_experiment_data["traffic_percentage"] = 30.0
+        sample_experiment_data["traffic_percentage"] = 0.3
         exp1 = Experiment(**sample_experiment_data)
         success1 = LayerService.add_experiment(db_session, layer, exp1)
         assert success1 is True
 
         # Add 25% experiment
         sample_experiment_data["experiment_id"] = "exp_25"
-        sample_experiment_data["traffic_percentage"] = 25.0
+        sample_experiment_data["traffic_percentage"] = 0.25
         exp2 = Experiment(**sample_experiment_data)
         success2 = LayerService.add_experiment(db_session, layer, exp2)
         assert success2 is True
 
         # Add 45% experiment
         sample_experiment_data["experiment_id"] = "exp_45"
-        sample_experiment_data["traffic_percentage"] = 45.0
+        sample_experiment_data["traffic_percentage"] = 0.45
         exp3 = Experiment(**sample_experiment_data)
         success3 = LayerService.add_experiment(db_session, layer, exp3)
         assert success3 is True

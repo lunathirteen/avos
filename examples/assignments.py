@@ -27,7 +27,7 @@ def main():
         layer_id="homepage_hero",
         layer_salt="homepage_salt_2025",
         total_slots=1000,
-        total_traffic_percentage=100.0,
+        total_traffic_percentage=1.0,
     )
 
     checkout_layer = LayerService.create_layer(
@@ -35,7 +35,7 @@ def main():
         layer_id="checkout_flow",
         layer_salt="checkout_salt_2025",
         total_slots=500,
-        total_traffic_percentage=100.0,
+        total_traffic_percentage=1.0,
     )
 
     # Step 2: Create and add experiments to layers
@@ -48,7 +48,7 @@ def main():
         name="Hero Button Color Test",
         variants=["blue", "green", "red"],
         traffic_allocation={"blue": 0.33, "green": 0.33, "red": 0.34},
-        traffic_percentage=60.0,
+        traffic_percentage=0.6,
         start_date=utc_now() - timedelta(hours=1),
         end_date=utc_now() + timedelta(days=14),
         status=ExperimentStatus.ACTIVE,
@@ -65,7 +65,7 @@ def main():
         name="Payment Methods Test",
         variants=["credit_first", "paypal_first"],
         traffic_allocation={"credit_first": 0.5, "paypal_first": 0.5},
-        traffic_percentage=75.0,
+        traffic_percentage=0.75,
         start_date=utc_now() - timedelta(hours=2),
         end_date=utc_now() + timedelta(days=10),
         status=ExperimentStatus.ACTIVE,

@@ -26,7 +26,7 @@ def test_apply_layer_configs_creates_layer_and_experiment(db_session):
         layer_id="layer_sync",
         layer_salt="salt_sync",
         total_slots=10,
-        total_traffic_percentage=100.0,
+        total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
                 experiment_id="exp_sync",
@@ -35,7 +35,7 @@ def test_apply_layer_configs_creates_layer_and_experiment(db_session):
                 variants=["A", "B"],
                 traffic_allocation={"A": 0.5, "B": 0.5},
                 status="active",
-                traffic_percentage=50.0,
+                traffic_percentage=0.5,
             )
         ],
     )
@@ -59,7 +59,7 @@ def test_apply_layer_configs_completed_frees_slots(db_session):
         layer_id="layer_sync",
         layer_salt="salt_sync",
         total_slots=10,
-        total_traffic_percentage=100.0,
+        total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
                 experiment_id="exp_sync",
@@ -68,7 +68,7 @@ def test_apply_layer_configs_completed_frees_slots(db_session):
                 variants=["A", "B"],
                 traffic_allocation={"A": 0.5, "B": 0.5},
                 status="active",
-                traffic_percentage=50.0,
+                traffic_percentage=0.5,
             )
         ],
     )
@@ -78,7 +78,7 @@ def test_apply_layer_configs_completed_frees_slots(db_session):
         layer_id="layer_sync",
         layer_salt="salt_sync",
         total_slots=10,
-        total_traffic_percentage=100.0,
+        total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
                 experiment_id="exp_sync",
@@ -87,7 +87,7 @@ def test_apply_layer_configs_completed_frees_slots(db_session):
                 variants=["A", "B"],
                 traffic_allocation={"A": 0.5, "B": 0.5},
                 status="completed",
-                traffic_percentage=50.0,
+                traffic_percentage=0.5,
             )
         ],
     )
@@ -110,7 +110,7 @@ def test_apply_layer_configs_variants_change_rejected(db_session):
         layer_id="layer_sync",
         layer_salt="salt_sync",
         total_slots=10,
-        total_traffic_percentage=100.0,
+        total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
                 experiment_id="exp_sync",
@@ -128,7 +128,7 @@ def test_apply_layer_configs_variants_change_rejected(db_session):
         layer_id="layer_sync",
         layer_salt="salt_sync",
         total_slots=10,
-        total_traffic_percentage=100.0,
+        total_traffic_percentage=1.0,
         experiments=[
             ExperimentConfig(
                 experiment_id="exp_sync",

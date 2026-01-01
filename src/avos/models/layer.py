@@ -19,7 +19,7 @@ class Layer(Base):
     layer_salt: Mapped[str] = mapped_column(String, nullable=False)
 
     total_slots: Mapped[int] = mapped_column(Integer, default=100)
-    total_traffic_percentage: Mapped[float] = mapped_column(Float, default=100.0)
+    total_traffic_percentage: Mapped[float] = mapped_column(Float, default=1.0)
 
     # UTC timezone-aware timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=utc_now)

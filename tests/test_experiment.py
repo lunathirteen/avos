@@ -38,7 +38,7 @@ def sample_experiment_data():
         "name": "Homepage Button Test",
         "variants": ["control", "treatment"],
         "traffic_allocation": {"control": 0.5, "treatment": 0.5},
-        "traffic_percentage": 100.0,
+        "traffic_percentage": 1.0,
         "start_date": utc_now() - timedelta(days=1),  # UTC
         "end_date": utc_now() + timedelta(days=7),  # UTC
         "status": ExperimentStatus.ACTIVE,
@@ -267,7 +267,7 @@ class TestExperimentIntegration:
             name="Integration Test",
             variants=["control", "treatment"],
             traffic_allocation={"control": 0.5, "treatment": 0.5},
-            traffic_percentage=50.0,
+            traffic_percentage=0.5,
             status=ExperimentStatus.ACTIVE,
         )
 
