@@ -18,7 +18,7 @@ class LayerService:
         layer_id: str,
         layer_salt: str,
         total_slots: int = 100,
-        total_traffic_percentage: float = 100.0,
+        total_traffic_percentage: float = 1.0,
     ) -> Layer:
         """Create a new layer with pre-allocated empty slots."""
         layer = Layer(
@@ -74,7 +74,7 @@ class LayerService:
             return False
 
         # Check slot availability
-        slots_needed = math.ceil((experiment.traffic_percentage / 100) * layer.total_slots)
+        slots_needed = math.ceil(experiment.traffic_percentage * layer.total_slots)
 
         free_slots = (
             session.execute(

@@ -39,7 +39,7 @@ class Experiment(Base):
 
     # Fields with defaults
     splitter_type: Mapped[str] = mapped_column(String, default="hash")  # e.g. "hash", "geo", "stratified"
-    traffic_percentage: Mapped[float] = mapped_column(Float, default=100.0)
+    traffic_percentage: Mapped[float] = mapped_column(Float, default=1.0)
     status: Mapped[ExperimentStatus] = mapped_column(SQLEnum(ExperimentStatus), default=ExperimentStatus.DRAFT)
     priority: Mapped[int] = mapped_column(Integer, default=0)
 
