@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Dict, Any
+import math
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 
@@ -73,7 +74,7 @@ class LayerService:
             return False
 
         # Check slot availability
-        slots_needed = int((experiment.traffic_percentage / 100) * layer.total_slots)
+        slots_needed = math.ceil((experiment.traffic_percentage / 100) * layer.total_slots)
 
         free_slots = (
             session.execute(

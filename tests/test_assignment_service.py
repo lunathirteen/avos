@@ -118,3 +118,16 @@ def test_preview_assignment_distribution(monkeypatch):
     assert "assignment_distribution" in preview
     assert preview["unassigned_count"] == 0
     assert preview["assignment_rate"] == 100.0
+
+
+def test_assignment_with_percentage_allocations_rejected():
+    layer = make_layer()
+    slot = make_slot(layer.layer_id, 0, "exp1")
+    exp = make_experiment(allocations=[50, 50])
+
+    session = MagicMock()
+    session.execute.return_value.scalar_one_or_none.return_value = slot
+    session.get.return_value = exp
+
+    with pytest.raises(ValueError, match="traffic_allocation must sum to 1.0"):
+        AssignmentService.assign_for_layer(session, layer, "user_pct")

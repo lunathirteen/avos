@@ -2,7 +2,7 @@ import numpy as np
 from statsmodels.stats.proportion import proportions_ztest, test_proportions_2indep
 
 
-def test_proportion_difference(count1, nobs1, count2, nobs2, method="ztest", alternative="two-sided", value=0):
+def proportion_difference_test(count1, nobs1, count2, nobs2, method="ztest", alternative="two-sided", value=0):
     """
     Test for difference in proportions between two independent samples.
 
@@ -39,11 +39,17 @@ def test_proportion_difference(count1, nobs1, count2, nobs2, method="ztest", alt
         - 'difference': Difference in proportions (p2 - p1)
         - 'lift': Relative difference in proportions (p2 / p1 - 1)
     """
+    if nobs1 <= 0 or nobs2 <= 0:
+        raise ValueError("nobs must be positive")
+
     # Calculate observed proportions
     prop1 = count1 / nobs1
     prop2 = count2 / nobs2
     diff = prop2 - prop1
-    lift = prop2 / prop1 - 1
+    if prop1 == 0:
+        lift = float("inf") if prop2 > 0 else 0.0
+    else:
+        lift = prop2 / prop1 - 1
 
     if method == "ztest":
         # Use proportions_ztest

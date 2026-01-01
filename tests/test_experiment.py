@@ -37,7 +37,7 @@ def sample_experiment_data():
         "layer_id": "test_layer",
         "name": "Homepage Button Test",
         "variants": ["control", "treatment"],
-        "traffic_allocation": {"control": 50, "treatment": 50},
+        "traffic_allocation": {"control": 0.5, "treatment": 0.5},
         "traffic_percentage": 100.0,
         "start_date": utc_now() - timedelta(days=1),  # UTC
         "end_date": utc_now() + timedelta(days=7),  # UTC
@@ -82,14 +82,29 @@ class TestExperimentCreation:
         traffic_parsed = json.loads(saved_exp.traffic_allocation)
 
         assert variants_parsed == ["control", "treatment"]
-        assert traffic_parsed == {"control": 50, "treatment": 50}
+        assert traffic_parsed == {"control": 0.5, "treatment": 0.5}
+
+    def test_experiment_segment_allocations_serialization(self, db_session, sample_layer, sample_experiment_data):
+        data = dict(sample_experiment_data)
+        data["segment_allocations"] = {"US": {"control": 0.6, "treatment": 0.4}}
+        exp = Experiment(**data)
+        db_session.add(exp)
+        db_session.commit()
+
+        saved_exp = db_session.execute(
+            select(Experiment).where(Experiment.experiment_id == "test_exp_001")
+        ).scalar_one_or_none()
+
+        assert isinstance(saved_exp.segment_allocations, str)
+        parsed = json.loads(saved_exp.segment_allocations)
+        assert parsed["US"]["control"] == 0.6
 
     def test_experiment_helper_methods(self, db_session, sample_layer, sample_experiment_data):
         """Test get_variant_list() and get_traffic_dict() helper methods."""
         exp = Experiment(**sample_experiment_data)
 
         assert exp.get_variant_list() == ["control", "treatment"]
-        assert exp.get_traffic_dict() == {"control": 50, "treatment": 50}
+        assert exp.get_traffic_dict() == {"control": 0.5, "treatment": 0.5}
 
     def test_experiment_timestamps_auto_populated(self, db_session, sample_layer, sample_experiment_data):
         """Test that created_at and updated_at are automatically populated."""
@@ -207,7 +222,7 @@ class TestExperimentEdgeCases:
 
     def test_experiment_with_complex_traffic_allocation(self, sample_experiment_data):
         """Test experiment with complex traffic allocation."""
-        complex_allocation = {"control": 25.5, "variant_a": 25.5, "variant_b": 24.0, "variant_c": 25.0}
+        complex_allocation = {"control": 0.125, "variant_a": 0.375, "variant_b": 0.25, "variant_c": 0.25}
 
         sample_experiment_data["variants"] = list(complex_allocation.keys())
         sample_experiment_data["traffic_allocation"] = complex_allocation
@@ -215,7 +230,7 @@ class TestExperimentEdgeCases:
         exp = Experiment(**sample_experiment_data)
 
         assert exp.get_traffic_dict() == complex_allocation
-        assert sum(exp.get_traffic_dict().values()) == 100.0
+        assert sum(exp.get_traffic_dict().values()) == 1.0
 
     def test_experiment_with_unicode_names(self, sample_experiment_data):
         """Test experiment with unicode characters in name."""
@@ -251,7 +266,7 @@ class TestExperimentIntegration:
             layer_id="integration_layer",
             name="Integration Test",
             variants=["control", "treatment"],
-            traffic_allocation={"control": 50, "treatment": 50},
+            traffic_allocation={"control": 0.5, "treatment": 0.5},
             traffic_percentage=50.0,
             status=ExperimentStatus.ACTIVE,
         )

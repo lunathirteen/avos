@@ -62,7 +62,7 @@ def main():
         layer_id="homepage_hero",
         name="Hero CTA Button Color Test v2",
         variants=["blue_primary", "green_convert", "red_urgent"],
-        traffic_allocation={"blue_primary": 40, "green_convert": 35, "red_urgent": 25},
+        traffic_allocation={"blue_primary": 0.4, "green_convert": 0.35, "red_urgent": 0.25},
         traffic_percentage=60.0,  # 60% of homepage visitors
         start_date=utc_now() - timedelta(hours=2),
         end_date=utc_now() + timedelta(days=14),
@@ -83,7 +83,7 @@ def main():
         layer_id="homepage_hero",
         name="Homepage Layout Optimization",
         variants=["layout_minimal", "layout_feature_rich", "layout_testimonials"],
-        traffic_allocation={"layout_minimal": 33, "layout_feature_rich": 34, "layout_testimonials": 33},
+        traffic_allocation={"layout_minimal": 0.33, "layout_feature_rich": 0.34, "layout_testimonials": 0.33},
         traffic_percentage=25.0,  # 25% additional traffic (total: 85% homepage experimentation)
         start_date=utc_now() - timedelta(days=1),
         end_date=utc_now() + timedelta(days=21),
@@ -104,7 +104,7 @@ def main():
         layer_id="checkout_flow",
         name="Payment Methods Order Test",
         variants=["credit_card_first", "paypal_prominent", "buy_now_pay_later_top"],
-        traffic_allocation={"credit_card_first": 50, "paypal_prominent": 30, "buy_now_pay_later_top": 20},
+        traffic_allocation={"credit_card_first": 0.5, "paypal_prominent": 0.3, "buy_now_pay_later_top": 0.2},
         traffic_percentage=75.0,  # 75% of checkout users
         start_date=utc_now() - timedelta(hours=6),
         end_date=utc_now() + timedelta(days=10),
@@ -126,10 +126,10 @@ def main():
         name="ML Recommendation Algorithm v3.0",
         variants=["collaborative_filtering", "deep_learning_v2", "hybrid_ensemble", "trending_boost"],
         traffic_allocation={
-            "collaborative_filtering": 25,
-            "deep_learning_v2": 35,
-            "hybrid_ensemble": 25,
-            "trending_boost": 15,
+            "collaborative_filtering": 0.25,
+            "deep_learning_v2": 0.35,
+            "hybrid_ensemble": 0.25,
+            "trending_boost": 0.15,
         },
         traffic_percentage=95.0,  # Almost all recommendation traffic (95% of 80% layer capacity)
         start_date=utc_now() - timedelta(days=3),
@@ -151,7 +151,7 @@ def main():
         layer_id="homepage_hero",
         name="Black Friday Banner Messaging",
         variants=["discount_percent", "limited_time", "countdown_timer", "social_proof"],
-        traffic_allocation={"discount_percent": 30, "limited_time": 25, "countdown_timer": 25, "social_proof": 20},
+        traffic_allocation={"discount_percent": 0.3, "limited_time": 0.25, "countdown_timer": 0.25, "social_proof": 0.2},
         traffic_percentage=10.0,  # Small remaining capacity (total now: 95%)
         start_date=utc_now() + timedelta(days=2),  # Starts in future
         end_date=utc_now() + timedelta(days=5),  # Short campaign
@@ -321,7 +321,7 @@ def main():
         layer_id="homepage_hero",
         name="This Should Fail - Over Capacity",
         variants=["variant_a"],
-        traffic_allocation={"variant_a": 100},
+        traffic_allocation={"variant_a": 1.0},
         traffic_percentage=110.0,  # This would exceed remaining capacity
         status=ExperimentStatus.ACTIVE,
     )

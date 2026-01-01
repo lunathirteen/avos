@@ -7,7 +7,7 @@ def test_load_experiment(tmp_path):
         layer_id: layer123
         name: New Button Test
         variants: [A, B, C]
-        traffic_allocation: {A: 33, B: 33, C: 34}
+        traffic_allocation: {A: 0.33, B: 0.33, C: 0.34}
         status: active
     """
     yaml_file = tmp_path / "experiment.yaml"
