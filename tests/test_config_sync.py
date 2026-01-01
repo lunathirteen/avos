@@ -186,7 +186,7 @@ def test_apply_layer_configs_allocation_change_rejected(db_session):
         apply_layer_configs(db_session, [changed_allocation])
 
 
-def test_apply_layer_configs_winner_allocation_allowed_on_completed(db_session):
+def test_apply_layer_configs_allocation_change_rejected_when_completed(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
@@ -222,14 +222,11 @@ def test_apply_layer_configs_winner_allocation_allowed_on_completed(db_session):
         ],
     )
 
-    apply_layer_configs(db_session, [completed])
-
-    experiment = LayerService.get_experiment(db_session, "exp_sync")
-    assert experiment.get_traffic_dict() == {"A": 1.0, "B": 0.0}
-    assert experiment.status == ExperimentStatus.COMPLETED
+    with pytest.raises(ValueError, match="traffic_allocation cannot be changed"):
+        apply_layer_configs(db_session, [completed])
 
 
-def test_apply_layer_configs_winner_allocation_rejected_when_active(db_session):
+def test_apply_layer_configs_allocation_change_rejected_when_active(db_session):
     layer_config = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
@@ -248,7 +245,7 @@ def test_apply_layer_configs_winner_allocation_rejected_when_active(db_session):
     )
     apply_layer_configs(db_session, [layer_config])
 
-    winner_active = LayerConfig(
+    changed_allocation = LayerConfig(
         layer_id="layer_sync",
         layer_salt="salt_sync",
         total_slots=BUCKET_SPACE,
@@ -265,8 +262,8 @@ def test_apply_layer_configs_winner_allocation_rejected_when_active(db_session):
         ],
     )
 
-    with pytest.raises(ValueError, match="winner allocation is allowed only when status is completed"):
-        apply_layer_configs(db_session, [winner_active])
+    with pytest.raises(ValueError, match="traffic_allocation cannot be changed"):
+        apply_layer_configs(db_session, [changed_allocation])
 
 
 def test_apply_layer_configs_traffic_percentage_ramp_up(db_session):

@@ -82,7 +82,7 @@ experiments:
 
 - Experiments are **not** deleted implicitly. To remove, set `status: completed`
 - `variants`, `splitter_type`, and `layer_id` are immutable after creation
-- Allocation changes require a new experiment; winner rollout (one variant `1.0`, others `0.0`) is allowed only when `status: completed`
+- Allocation changes require a new experiment
 - `reserved_percentage` can only increase for an existing experiment
 - Completed experiments cannot be modified
 

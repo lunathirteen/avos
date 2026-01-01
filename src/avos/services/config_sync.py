@@ -73,12 +73,10 @@ def _apply_experiment_config(session: Session, layer, experiment_config: Experim
                     "create a new experiment"
                 )
             if existing.get_traffic_dict() != experiment_config.traffic_allocation:
-                if not _is_winner_allocation(experiment_config.variants, experiment_config.traffic_allocation):
-                    raise ValueError(
-                        f"experiment {experiment_config.experiment_id} traffic_allocation can only change to a "
-                        "winner allocation when status is completed"
-                    )
-                existing.traffic_allocation = json.dumps(experiment_config.traffic_allocation)
+                raise ValueError(
+                    f"experiment {experiment_config.experiment_id} traffic_allocation cannot be changed; "
+                    "create a new experiment"
+                )
             LayerService.remove_experiment(session, layer, experiment_config.experiment_id)
         return
 
@@ -143,11 +141,6 @@ def _validate_experiment_immutables(existing: Experiment, experiment_config: Exp
             "create a new experiment"
         )
     if existing.get_traffic_dict() != experiment_config.traffic_allocation:
-        if _is_winner_allocation(experiment_config.variants, experiment_config.traffic_allocation):
-            raise ValueError(
-                f"experiment {experiment_config.experiment_id} winner allocation is allowed only when status "
-                "is completed"
-            )
         raise ValueError(
             f"experiment {experiment_config.experiment_id} traffic_allocation cannot be changed; "
             "create a new experiment"
@@ -297,17 +290,3 @@ def _apply_ramp_up_slots(session: Session, layer, existing: Experiment, experime
     for slot in free_reserved_slots:
         slot.experiment_id = existing.experiment_id
 
-
-def _is_winner_allocation(variants, allocation):
-    if not allocation:
-        return False
-    winner = None
-    for variant in variants:
-        value = allocation.get(variant, 0.0)
-        if abs(value - 1.0) <= 1e-6:
-            if winner is not None:
-                return False
-            winner = variant
-        elif abs(value) > 1e-6:
-            return False
-    return winner is not None
