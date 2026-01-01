@@ -29,7 +29,7 @@ def sample_experiment_data():
         "layer_id": "test_layer",
         "name": "Test Experiment",
         "variants": ["control", "treatment"],
-        "traffic_allocation": {"control": 50, "treatment": 50},
+        "traffic_allocation": {"control": 0.5, "treatment": 0.5},
         "traffic_percentage": 50.0,
         "start_date": datetime.now(UTC),
         "end_date": datetime.now(UTC) + timedelta(days=7),

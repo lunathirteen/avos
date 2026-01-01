@@ -69,6 +69,15 @@ class Experiment(Base):
         kw["end_date"] = to_utc(end_date)
         kw["created_at"] = to_utc(created_at) or utc_now()
         kw["updated_at"] = to_utc(updated_at) or utc_now()
+        if "segment_allocations" in kw and kw["segment_allocations"] is not None:
+            if not isinstance(kw["segment_allocations"], str):
+                kw["segment_allocations"] = json.dumps(kw["segment_allocations"])
+        if "geo_allocations" in kw and kw["geo_allocations"] is not None:
+            if not isinstance(kw["geo_allocations"], str):
+                kw["geo_allocations"] = json.dumps(kw["geo_allocations"])
+        if "stratum_allocations" in kw and kw["stratum_allocations"] is not None:
+            if not isinstance(kw["stratum_allocations"], str):
+                kw["stratum_allocations"] = json.dumps(kw["stratum_allocations"])
 
         super().__init__(**kw)
 

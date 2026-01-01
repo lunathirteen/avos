@@ -17,9 +17,9 @@ class ExperimentConfig(BaseModel):
     status: Literal["draft", "active", "paused", "completed"] = "draft"
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    segment_allocations: Optional[Dict[str, float]] = None
-    geo_allocations: Optional[Dict[str, float]] = None
-    stratum_allocations: Optional[Dict[str, float]] = None
+    segment_allocations: Optional[Dict[str, Dict[str, float]]] = None
+    geo_allocations: Optional[Dict[str, Dict[str, float]]] = None
+    stratum_allocations: Optional[Dict[str, Dict[str, float]]] = None
     splitter_type: Optional[str] = "hash"
     traffic_percentage: float = 100.0
     priority: int = 0

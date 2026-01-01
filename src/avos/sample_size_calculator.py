@@ -146,7 +146,7 @@ def plot_power_curve_continuous(
     for mde in mde_values:
         # Calculate Sample Size
         n = calculate_sample_size_continuous(baseline_mean=baseline_mean, mde=mde, std=std)
-        sample_sizes.append(n)
+        sample_sizes.append(n["sample_size"])
 
     plt.figure(figsize=(8, 5))
     plt.plot(mde_values, sample_sizes, marker="o")
@@ -176,7 +176,7 @@ def plot_power_curve_proportions(
     for mde in mde_values:
         # Calculate Sample Size
         n = calculate_sample_size_proportions(baseline_rate=baseline_rate, mde=mde)
-        sample_sizes.append(n)
+        sample_sizes.append(n["sample_size"])
 
     plt.figure(figsize=(8, 5))
     plt.plot(mde_values, sample_sizes, marker="o")

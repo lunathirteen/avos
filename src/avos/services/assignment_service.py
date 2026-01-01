@@ -5,7 +5,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from avos.models.layer import Layer, LayerSlot
 from avos.models.experiment import Experiment
-from avos.services.splitter import HashBasedSplitter, RandomSplitter, StratifiedSplitter, GeoBasedSplitter
+from avos.services.splitter import (
+    HashBasedSplitter,
+    RandomSplitter,
+    StratifiedSplitter,
+    GeoBasedSplitter,
+    SegmentedSplitter,
+    normalize_allocations,
+)
 from avos.utils.datetime_utils import utc_now
 
 
@@ -45,9 +52,9 @@ class AssignmentService:
         if stratum:
             splitter_kwargs["stratum"] = stratum
 
-        variant = splitter.assign_variant(
-            unit_id, experiment.get_variant_list(), list(experiment.get_traffic_dict().values()), **splitter_kwargs
-        )
+        variants = experiment.get_variant_list()
+        allocations = normalize_allocations(variants, experiment.get_traffic_dict(), context="traffic_allocation")
+        variant = splitter.assign_variant(unit_id, variants, allocations, **splitter_kwargs)
         return AssignmentService._make_assignment(
             unit_id, layer, slot_index, experiment.experiment_id, variant, "assigned"
         )
@@ -120,6 +127,8 @@ class AssignmentService:
             return StratifiedSplitter(experiment.experiment_id, experiment.get_stratum_allocations())
         elif splitter_type == "geo":
             return GeoBasedSplitter(experiment.experiment_id, experiment.get_geo_allocations())
+        elif splitter_type == "segment":
+            return SegmentedSplitter(experiment.experiment_id, experiment.get_segment_allocations())
         else:
             raise ValueError(f"Unknown splitter type: {splitter_type}")
 

@@ -8,16 +8,16 @@ def test_experiment_config_valid():
         "layer_id": "layer1",
         "name": "Test AB",
         "variants": ["A", "B"],
-        "traffic_allocation": {"A": 60, "B": 40},
+        "traffic_allocation": {"A": 0.6, "B": 0.4},
         "status": "active",
         "start_date": "2025-11-01T00:00:00Z",
         "end_date": "2025-11-15T00:00:00Z",
-        "segment_allocations": {"US": 20, "Canada": 10},
+        "segment_allocations": {"US": {"A": 0.6, "B": 0.4}},
     }
     experiment = ExperimentConfig(**data)
     assert experiment.status == "active"
     assert experiment.variants == ["A", "B"]
-    assert experiment.segment_allocations["US"] == 20
+    assert experiment.segment_allocations["US"]["A"] == 0.6
 
 
 def test_layer_config_with_experiments_and_slots():
@@ -32,7 +32,7 @@ def test_layer_config_with_experiments_and_slots():
                 "layer_id": "layer1",
                 "name": "Button Color",
                 "variants": ["red", "blue"],
-                "traffic_allocation": {"red": 50, "blue": 50},
+                "traffic_allocation": {"red": 0.5, "blue": 0.5},
                 "status": "draft",
             }
         ],
@@ -47,7 +47,7 @@ def test_layer_config_with_experiments_and_slots():
 def test_experiment_config_missing_required_raises():
     with pytest.raises(Exception):
         ExperimentConfig(
-            experiment_id="exp3", variants=["A"], traffic_allocation={"A": 100}  # missing layer_id and name
+            experiment_id="exp3", variants=["A"], traffic_allocation={"A": 1.0}  # missing layer_id and name
         )
 
 
@@ -64,6 +64,6 @@ def test_experiment_invalid_status():
             layer_id="layer2",
             name="Bad Status",
             variants=["A", "B"],
-            traffic_allocation={"A": 50, "B": 50},
+            traffic_allocation={"A": 0.5, "B": 0.5},
             status="in_progress",  # not allowed by Literal
         )
