@@ -1,0 +1,21 @@
+layer_id: homepage_hero
+layer_salt: homepage_salt_2025
+total_slots: 100
+total_traffic_percentage: 100.0
+experiments:
+  - experiment_id: hero_button_colors_v1
+    layer_id: homepage_hero
+    name: Hero Button Colors v1
+    variants: [blue, green]
+    traffic_allocation: {blue: 0.5, green: 0.5}
+    status: active
+    splitter_type: hash
+    traffic_percentage: 60.0
+  - experiment_id: hero_layout_v1
+    layer_id: homepage_hero
+    name: Hero Layout v1
+    variants: [layout_a, layout_b, layout_c]
+    traffic_allocation: {layout_a: 0.34, layout_b: 0.33, layout_c: 0.33}
+    status: active
+    splitter_type: hash
+    traffic_percentage: 30.0
